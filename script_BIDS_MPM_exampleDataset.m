@@ -246,7 +246,7 @@ end
 % -------------------------------------------------------
 % First the 2 magnitude images
 % Filename structure
-fn_bids_B0mag_struct = 'sub-%s_part-magnitude%d.nii';
+fn_bids_B0mag_struct = 'sub-%s_magnitude%d.nii';
 % feed in "subject label", "magnitude index"
 B0mag_pth = fullfile(rootPth,'gre_field_mapping_1acq_rl_0005');
 fn_B0mag_nii = spm_select('FPList',B0mag_pth,'^.*\.nii$');
@@ -267,7 +267,7 @@ end
 
 % Then the phase difference
 % Filename structure
-fn_bids_B0pdiff_struct = 'sub-%s_part-phasediff.nii';
+fn_bids_B0pdiff_struct = 'sub-%s_phasediff.nii';
 B0pdiff_pth = fullfile(rootPth,'gre_field_mapping_1acq_rl_0006');
 fn_B0pdiff_nii = spm_select('FPList',B0pdiff_pth,'^.*\.nii$');
 % a) Deal with images
