@@ -49,6 +49,10 @@ These are images acquired from a single subject, following an MPM acquisition pr
   - information on the DICOM-to-NIfTI conversion step with SPM12 `spm_dicom_convert.m` function
   - a copy of the whole DICOM header, i.e. with all the meta data, included system/sequence specific ones
 
+The organisation of the data in 12 folders is overall complex to handle, and there is little information in the folder-/filenames to know what they contain...
+
+
+
 ## Objective
 
 The goal is thus to make this "raw" set of data BIDS compliant, according to the [BEP001 proposal](https://github.com/bids-standard/bep001) that is currently being developed.  This involves:
@@ -56,6 +60,28 @@ The goal is thus to make this "raw" set of data BIDS compliant, according to the
 - reorganizing the files into BIDS-defined folders, here `anat` and `fmap`
 - renaming the image+JSON files using BIDS nomenclature for multi-echo, multi-FA, image type, etc.
 - rewrite the JSON files such that they contain explicitly defined meta-data keywords
+
+
+
+## Script to BIDS-ify the data
+
+A [script](https://github.com/CyclotronResearchCentre/hMRItbx_SampleDS_BIDS/blob/master/script_BIDS_MPM_exampleDataset.m) can be run over the example data set to make them BIDS-friendly.
+
+There nevertheless remain a [few issues](https://github.com/CyclotronResearchCentre/hMRItbx_SampleDS_BIDS/issues) to sort as well as room for improvements, for example:
+
+- check the list of metadata and their definition. Some need to be added in the BEP001 proposal
+
+- completing some JSON files, especially the fieldmap ones to link these with their corresponding anatomical images, using the `IntendedFor` field.
+
+- add an option to zip image files as they're BIDS-ified. 
+
+- Note too that the script relies on :
+  - a function called `hmri_BIDSify_json.m` to refactor the metadata from  the DICOM header. This itself relies on the `get_metadata_val.m` function from the hMRI toolbox
+  - a tab-separated-value file, `JSONtabl_dcm2bids.tsv`, with the list of metadata fields required.
+
+  These could certainly be improved too.
+
+
 
 ---
 
