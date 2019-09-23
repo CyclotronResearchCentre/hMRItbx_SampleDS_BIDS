@@ -21,7 +21,13 @@
 % 2/ Create the hMRI batch
 % The file sub-folder names are all explicitly stated, as they're those
 % from the original data set.
+%__________________________________________________________________________
+% Copyright (C) 2018 GIGA Institute
 
+% Written by C. Phillips, 2019.
+% Cyclotron Research Centre, University of Liege, Belgium
+
+%==========================================================================
 %% 1/ Finding or defining the 'rooDir' of the data folder.
 % The script successively tries a few options:
 % a) the user explicitly sets up the folder path
