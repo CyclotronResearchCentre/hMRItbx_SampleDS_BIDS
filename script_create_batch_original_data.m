@@ -9,6 +9,18 @@
 % 3/ finally saves it a .mat file for further use, e.g. loading in the
 %    batch-GUI
 %__________________________________________________________________________
+%
+% 1/ Finding or defining the 'rooDir' of the data folder.
+% The script successively tries a few options:
+% a) the user explicitly sets up the folder path
+% b) check if the data are in the current working directory
+% c) check if the data can be found relative to this script's current
+%    folder (one folder up actually)
+% d) if all alse fails, ask the user to select the folder manually
+%
+% 2/ Create the hMRI batch
+% The file sub-folder names are all explicitly stated, as they're those
+% from the original data set.
 
 %% 1/ Finding or defining the 'rooDir' of the data folder.
 % The script successively tries a few options:
