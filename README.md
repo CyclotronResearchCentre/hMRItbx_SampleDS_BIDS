@@ -57,3 +57,38 @@ The goal is thus to make this "raw" set of data BIDS compliant, according to the
 - renaming the image+JSON files using BIDS nomenclature for multi-echo, multi-FA, image type, etc.
 - rewrite the JSON files such that they contain explicitly defined meta-data keywords
 
+---
+
+## Original  data processing
+
+It would still be useful to process the original data, to set up a ground truth of the results. Unfortunately the path to the various images are hard-coded in the batch file provided with the data set. One would thus have to *update all the path's* according to the OS (`/` or `\` separator) and where the are saved on your hard-drive (e.g. `C:\MyData\hMRIexample` or `/home/Myself/MyData/hMRIexample`).
+
+Therefore I wrote a [little script](https://github.com/CyclotronResearchCentre/hMRItbx_SampleDS_BIDS/blob/master/script_create_batch_original_data.m) that builds up such a batch based simply on the path to the root folder of the data set. Here is the help with some explanations:
+
+```
+%% SCRIPT generating the batch for the hMRI data processing
+%
+% The batch needs the correct path to the data but these are stored on the
+% user's computer. Therefore this script simply
+% 1/ tries to figure out where the data are stored or asks the user to 
+%    specify the main folder manually.
+% 2/ then it sets up the hMRI map creation batch, with the selection of the
+%    provided 'hmri_local_defaults.m' file with default parameters.
+% 3/ finally saves it a .mat file for further use, e.g. loading in the
+%    batch-GUI
+%__________________________________________________________________________
+%
+% 1/ Finding or defining the 'rooDir' of the data folder.
+% The script successively tries a few options:
+% a) the user explicitly sets up the folder path
+% b) check if the data are in the current working directory
+% c) check if the data can be found relative to this script's current
+%    folder (one folder up actually)
+% d) if all alse fails, ask the user to select the folder manually
+%
+% 2/ Create the hMRI batch
+% The file sub-folder names are all explicitly stated, as they're those
+% from the original data set.
+```
+
+The batch also picks up the `hmri_local_defaults.m` file.
