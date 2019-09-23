@@ -13,13 +13,25 @@
 %  maps.
 % 
 % Still missing/to check:
+% =======================
 % - turn this into a function with a few option flags as to how things are
 % done, especially what should be saved (full DICOM header?) or not.
+% - add the required top metadata files describing the dataset and 
+%   participant
+% - for the 'fmap' images at the "IntendedFor" metadata
+% - gzip all images ('gzip' function)?
 % - check filenames convention                \_ according to BEP001 crowd
 % - check metadata list (names and definition)/
 % - check the units of metadata extracted
+% - the '_mod-*' is used for the B1- maps. These are not defined in BEP001
+%   so far. Moreover the filename '_mod-*' field is currently ONLY defined 
+%   for the case of '_defacemask.nii' images!
+% - the B1+ maps is defined but no B1- map in the BEP001 so far
+% - for B1+ (and maybe B1-) maps, there is a specific suffix, B1plusmap
+%   (and maybe B1minusmap) but not for the B0 images.
 % 
 % Dependencies:
+% =============
 % - a function called "hmri_BIDSify_json.m" to refactor the metadata from 
 %   the DICOM header. This itself relies on the get_metadata_val.m function
 %   from the hMRI toolbox
@@ -28,9 +40,9 @@
 % These 2 are already on the hMRI private github server in Leipzig
 % -> need to keep track of these.
 %__________________________________________________________________________
-% Copyright (C) 2018 GIGA Institute
+% Copyright (C) 2019 GIGA Institute
 
-% Written by C. Phillips, 2018.
+% Written by C. Phillips, 2019.
 % Cyclotron Research Centre, University of Liege, Belgium
 
 % NOTES:
@@ -49,16 +61,21 @@
 % the end of the map creation process...
 
 %% Some defaults
+
+% Main folder with the data
 rootPth = 'C:\Dox\2_Data\hmri_sample_dataset_with_maps';
+% Subject label
 subj_label = 'anon';
+% Where the BIDS-ified data will be copied, bidsPth & subjPth
 bidsPth = fullfile(rootPth,'BIDS_dataset');
 if ~exist(bidsPth,'dir'), mkdir(bidsPth), end;
 subjPth = fullfile(bidsPth,sprintf('subj-%s',subj_label));
 if ~exist(subjPth,'dir'), mkdir(subjPth), end;
 
-%% Get MPM parameters &  the filenames list for the anatomical images
+%% Deal with the anatomical images
 
-% Filenames for the 3 types (MTw, PDw, T1w)
+% 1/ Get the filenames for the 3 types (MTw, PDw, T1w) of anatomical images
+% -------------------------------------------------------------------------
 seq_label = { 'MTw' , 'PDw' , 'T1w' };
 pth_MPM = { ...
     'mtw_mfc_3dflash_v1i_R4_0012' , ...
@@ -66,24 +83,31 @@ pth_MPM = { ...
     't1w_mfc_3dflash_v1i_R4_0015' };
 
 fn_MPM = cell(1,3) ; % empty cell array for filenames
-% MTw
+% get MTw
 pth_MTw = fullfile(rootPth,pth_MPM{1});
 fn_MPM{1} = spm_select('FPList',pth_MTw,'^.*\.nii$');
-% PDw
+% get PDw
 pth_PDw = fullfile(rootPth,pth_MPM{2});
 fn_MPM{2} = spm_select('FPList',pth_PDw,'^.*\.nii$');
-% T1w
+% get T1w
 pth_T1w = fullfile(rootPth,pth_MPM{3});
 fn_MPM{3} = spm_select('FPList',pth_T1w,'^.*\.nii$');
 
-%% Move and rename images + update corresponding json file
-fn_bids_struct = 'sub-%s_echo-%d_part-mag_%s.%s';
-% feed in "subject label", "echo index", "sequence label", "extension"
+% 2/ Move and rename anatomical images + update corresponding json file
+% ---------------------------------------------------------------------
+% Filename structure
+fn_bids_struct = 'sub-%s_echo-%d_acq-%s_MPM.%s';
+% feed in "subject label", "echo index", "acqusition sequence", "extension"
+% According to BEP001, multi-echi anatomical images acquired with the MPM
+% protocal should be of type '_MPM'. The contrast (MT/PD/T1-weighted) is
+% only an acquisition parameter -> in the '_acq-***_' part of the filename
+
+% 'anat' folder: define & create as needed
 anatPth = fullfile(subjPth,'anat');
 if ~exist(anatPth,'dir'), mkdir(anatPth), end;
 
 % MPM files, .nii and .json
-for iseq = 1:3 % 3 types of sequences (MTw, PDw, T1w)
+for iseq = 1:3 % 3 types of sequences (MTw, PDw, T1w) *in that order*!
     nMPMw_ii = size(fn_MPM{iseq},1);
     if nMPMw_ii
         for ii=1:nMPMw_ii
@@ -105,7 +129,7 @@ for iseq = 1:3 % 3 types of sequences (MTw, PDw, T1w)
 end
 % Now update all JSON files
 fn_jsonAnat = spm_select('FPList',anatPth,'^.*\.json$');
-% In one go, using a single function to pull out all the postential fields
+% In one go, using a single function to pull out all the potential fields
 % necessary for the MPM data
 fn_jsonAnat_BIDS = hmri_BIDSify_json(fn_jsonAnat);
 
@@ -145,24 +169,26 @@ fn_jsonAnat_BIDS = hmri_BIDSify_json(fn_jsonAnat);
 %% Deal with the field maps
 % Work with the 3 different types of maps one at a time:
 % - B1minus = RF sensitivity, 2 images per anatomical image type
-%   -> modality (mod-MTw/PDw/T1w), acquisition (acq-head/body), part-mag
+%   -> modality (mod-MTw/PDw/T1w), acquisition (acq-head/body)
 % - B1plus = emission with 22 images
-%   -> echo index, part-mag
+%   -> echo index
 % - B0 = classic field maps. 2 magnitude + 1 phase diff
-%   -> part-mag1/mag2/phasediff
+%   -> part-magnitude1/magnitude2/phasediff
 
-% fmap folder
+% 'fmap' folder: define & create as needed
 fmapPth = fullfile(subjPth,'fmap');
 if ~exist(fmapPth,'dir'), mkdir(fmapPth), end;
 
-% 1/ Deal with B1- (RF sensitivity)
-fn_bids_B1m_struct = 'sub-%s_mod-%s_acq-%s_part-mag_B1minus.nii';
-% feed in "subject label", "modality" (MTw/PDw/T1w), "acquisition type" (head/body)
+% 1/ Deal with 6 B1- maps(RF sensitivity), 3 mod-type x 2 acq-coils
+% -----------------------------------------------------------------
+% Filename structure
+fn_bids_B1m_struct = 'sub-%s_acq-%s_mod-%s_B1minusmap.nii';
+% feed in "subject label", "acquisition type" (head/body), "modality" (MTw/PDw/T1w)
 
-% Filenames for the 3X2 types (MTw, PDw, T1w) x (head/body)
+% Filenames for the 3X2 types: (MTw, PDw, T1w) x (head/body)
 mod_label = { 'MTw' , 'PDw' , 'T1w' };
 acq_label = {'head', 'body'};
-
+% and the corresponding folder in the data set structure
 pth_B1m = { ...
     'mfc_smaps_v1a_Array_0010' , 'mfc_smaps_v1a_QBC_0011' ;...
     'mfc_smaps_v1a_Array_0007' , 'mfc_smaps_v1a_QBC_0008' ;...
@@ -172,10 +198,11 @@ for imod = 1:3
     for iacq = 1:2
         pth_iSA = fullfile(rootPth,pth_B1m{imod,iacq});
         % a) Deal with images
+        % Select the image file requested.
         fn_iSA_nii = spm_select('FPList',pth_iSA,'^.*\.nii$');
         fn_bidsB1m_iAS_nii = fullfile(fmapPth, ...  % path
             sprintf( fn_bids_B1m_struct, ...            % filename
-            subj_label, mod_label{imod}, acq_label{iacq} ) ); % feeds
+            subj_label, acq_label{iacq}, mod_label{imod} ) ); % feeds
         % copy file with name change
         copyfile(fn_iSA_nii,fn_bidsB1m_iAS_nii);
         % b) Deal with JSON
@@ -186,11 +213,14 @@ for imod = 1:3
     end
 end
 
-% 2/ Deal with B1+ (B1 bias correction), 11 FA x 2 acqusition types
-fn_bids_B1p_struct = 'sub-%s_fa-%02d_acq-%s_part-mag_B1plus.nii';
+% 2/ Deal with B1+ (B1 bias correction), 11 FA x 2 acquisition types
+% ------------------------------------------------------------------
+% Filename structure
+fn_bids_B1p_struct = 'sub-%s_acq-%s_fa-%02d_B1plusmap.nii';
 % feed in "subject label", "acquisition type" (SE/STE), "flip angle" (index)
 acq_label = {'SE', 'STE'};
 
+% Select the images for the SE/STE acquisition
 pth_B1p = fullfile(rootPth,'mfc_seste_b1map_v1e_0004');
 fn_B1plus{1} = spm_select('FPList',pth_B1p,'^.*-1\.nii$');
 fn_B1plus{2} = spm_select('FPList',pth_B1p,'^.*-2\.nii$');
@@ -201,7 +231,7 @@ for ifa = 1:11
         fn_iFA_nii = deblank(fn_B1plus{iacq}(ifa,:));
         fn_bidsB1p_iFA_nii = fullfile(fmapPth, ...    % path
             sprintf( fn_bids_B1p_struct, ...      % filename
-            subj_label, ifa, acq_label{iacq} ) ); % feeds
+            subj_label, acq_label{iacq}, ifa ) ); % feeds
         % copy file with name change
         copyfile(fn_iFA_nii,fn_bidsB1p_iFA_nii);
         % b) Deal with JSON
@@ -213,8 +243,10 @@ for ifa = 1:11
 end
 
 % 3/ Deal with B0, 2 magnitude + 1 phase difference image
+% -------------------------------------------------------
 % First the 2 magnitude images
-fn_bids_B0mag_struct = 'sub-%s_part-mag%d_B0.nii';
+% Filename structure
+fn_bids_B0mag_struct = 'sub-%s_part-magnitude%d.nii';
 % feed in "subject label", "magnitude index"
 B0mag_pth = fullfile(rootPth,'gre_field_mapping_1acq_rl_0005');
 fn_B0mag_nii = spm_select('FPList',B0mag_pth,'^.*\.nii$');
@@ -234,7 +266,8 @@ for ii=1:2
 end
 
 % Then the phase difference
-fn_bids_B0pdiff_struct = 'sub-%s_part-phasediff_B0.nii';
+% Filename structure
+fn_bids_B0pdiff_struct = 'sub-%s_part-phasediff.nii';
 B0pdiff_pth = fullfile(rootPth,'gre_field_mapping_1acq_rl_0006');
 fn_B0pdiff_nii = spm_select('FPList',B0pdiff_pth,'^.*\.nii$');
 % a) Deal with images
