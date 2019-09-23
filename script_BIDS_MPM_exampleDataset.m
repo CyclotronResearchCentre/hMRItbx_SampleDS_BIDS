@@ -11,7 +11,28 @@
 %   hMRI toolbox
 %  This works similarly for the RFsens (B1-) and B1map (B0 and B1+) field
 %  maps.
-%
+% 
+% Still missing/to check:
+% - turn this into a function with a few option flags as to how things are
+% done, especially what should be saved (full DICOM header?) or not.
+% - check filenames convention                \_ according to BEP001 crowd
+% - check metadata list (names and definition)/
+% - check the units of metadata extracted
+% 
+% Dependencies:
+% - a function called "hmri_BIDSify_json.m" to refactor the metadata from 
+%   the DICOM header. This itself relies on the get_metadata_val.m function
+%   from the hMRI toolbox
+% - a tab-separated-value file, JSONtabl_dcm2bids.tsv, with the list of 
+%   metadata fields required.
+% These 2 are already on the hMRI private github server in Leipzig
+% -> need to keep track of these.
+%__________________________________________________________________________
+% Copyright (C) 2018 GIGA Institute
+
+% Written by C. Phillips, 2018.
+% Cyclotron Research Centre, University of Liege, Belgium
+
 % NOTES:
 % 1/ It could be useful to create a batch-GUI to select (semi-)manually the
 % data in order to figure out what is really at hand
