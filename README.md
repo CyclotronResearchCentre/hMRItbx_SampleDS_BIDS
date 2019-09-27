@@ -61,6 +61,8 @@ The goal is thus to make this "raw" set of data BIDS compliant, according to the
 - renaming the image+JSON files using BIDS nomenclature for multi-echo, multi-FA, image type, etc.
 - rewrite the JSON files such that they contain explicitly defined meta-data keywords
 
+The list of meta-data field names used in the hMRI toolbox/MPM protocol versus what's available in BIDS specs are compared in this [`MPM_parameter_list.md`](https://github.com/CyclotronResearchCentre/hMRItbx_SampleDS_BIDS/blob/master/MPM_parameter_list.md) file. Some are missing from the BIDS specs, especially relating to B1 maps.
+
 The resulting BIDS-ified dataset will eventually be published on the [BEP001 OSF platform](https://osf.io/k4bs5/).
 
 ## Scripts and bits of code
