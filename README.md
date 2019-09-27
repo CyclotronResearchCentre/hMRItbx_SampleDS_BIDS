@@ -98,7 +98,7 @@ The list of parameters used/needed by the hMRI toolbox is actually defined in th
 
 ### 3/ `hmri_create_JSONtabl.m` to list the acquisition meta-data
 
-This is a simple and modular way to create a table of (acquisition) meta-data, necessary for the quantitative map calculation. Since meta-data fetching was already implemented in the hMRI toolbox (through the `get_metadata_val.m` function), this links the BIDS meta-data fieldnames with those from the (original) hMRI toolbox.
+This is a simple and modular way to create a table of (acquisition) meta-data, necessary for the quantitative map calculation. Since meta-data fetching was already implemented in the hMRI toolbox (through the `get_metadata_val.m` function), this links the BIDS meta-data field names with those from the (original) hMRI toolbox.
 
 Note this list is not definitive, so the function could be updated as seemed fit.
 
