@@ -9,19 +9,15 @@ function fn_JSONtabl = hmri_create_JSONtabl(fn_JSONtabl, opt)
 % 1/ list the metadata needed,
 %   * by their 'search' name in the original Dicom-hdr JSON file
 %   * with corresponding BIDS JSON file
-%   * plus some scaling factor, e.g. [ms] -> [s], if necessary
 %   in a single cell array,
 % 2/ save it as a .tsv file for further use
-% The table includes 3 main columns:
+% The table includes 2 main columns:
 % - 'FieldnamesOriginal', fieldname in the Dicom header
 % - 'FieldnamesBIDS', fieldname for BIDS
-% - 'Scaling', scaling can be useful to match BIDS units (i.e. SI units),
-%   for example [ms]->[s] means a scaling by .001.
-%   Use 'NaN' if no scaling is required, e.g. for a char/string
 %
 % NOTE:
-% the latest version of the DCM-to-NIfTI conversion works with SI units, so
-% scaling values are set to 1.
+% - Previous version included some scaling, which is dropped now.
+% - there remain some issues wrt. some BIDS metadata, see further down.
 %
 % FORMAT
 %   fn_JSONtabl = hmri_create_JSONtabl(fn_JSONtabl, opt)
@@ -38,11 +34,6 @@ function fn_JSONtabl = hmri_create_JSONtabl(fn_JSONtabl, opt)
 % Written by C. Phillips, 2018.
 % Cyclotron Research Centre, University of Liege, Belgium
 
-% NOTE:
-% most scaling has been included in the get_metadata_val.m function, so all
-% values are set to 1 here. Still I keep this feature in as it could prove
-% useful at some point in the future...
-
 %% Deal with input
 
 % No filename passed -> create a generic one
@@ -58,54 +49,92 @@ if nargin <2
 end
 
 %% Create table
+% =============
 
-% MPM parameters only, from the calls to 'get_metadata_val.m' in the
-% 'hmri_create_*.m' functions.
+% 1/ MPM parameters only, 
+% -----------------------
+% from the calls to 'get_metadata_val.m' in the 'hmri_create_*.m' functions
+% and which are used to create the qMRI.
 metadata_MPM = {...
-    'FieldnamesOriginal',           'FieldnamesBIDS',           'Scaling' ; ...
-    ... % Main parameters
-    'RepetitionTime',               'RepetitionTimeExcitation', 1 ; ... % TR [s] -> [s]
-    'EchoTime',                     'EchoTime',                 1 ; ... % TE [s] -> [s]
-    'FlipAngle',                    'FlipAngle',                1 ; ...    % [deg]
-    ... % add for 3D_EPI
-    'B1mapNominalFAValues',         'B1mapNominalFAValues',     1 ; ...    % for al_B1mapping [deg]
-    'B1mapMixingTime',              'MixingTime',               1 ; ... % for al_B1mapping [s] -> [s]
-    'epiReadoutDuration',           'epiReadoutDuration',       1 ; ... % [s] -> [s]
-    'PhaseEncodingDirectionSign',   'PhaseEncodingDirectionSign',NaN ; ...  % A>>P & R>>L = 1; P>>A & L>>R = 0
+    'FieldnamesOriginal',           'FieldnamesBIDS' ; ...
+    ... % Main parameters: timing and RF
+    'RepetitionTime',               'RepetitionTimeExcitation'  ; ... % TR [s]
+    'EchoTime',                     'EchoTime'                  ; ... % TE [s]
+    'FlipAngle',                    'FlipAngle'                 ; ... % FlipAngle [deg]
+    ... % Sequence specific
+    'MT',                           'MTstate'                   ; ... % MT pulse [0/1]
+    ... % In-Plane Spatial Encoding
+    'NumberOfMeasurements',         'NumberShots'               ; ... % #RF excitations to reconstruct slove/volume
+    'epiReadoutDuration',           'TotalReadoutTime'          ; ... % [s]
+    'PhaseEncodingDirectionSign',   'PhaseEncodingDirectionSign'; ... % A>>P & R>>L = 1; P>>A & L>>R = 0
+    ... % add for 3D_EPI used for al_B1mapping
+    'B1mapNominalFAValues',         'NominalFAValues'           ; ... % [deg]
+    'B1mapMixingTime',              'MixingTime'                ; ... % [s]
     ... % Some names for scanning, sequence, etc.
-    'ScanningSequence',             'ScanningSequence',         NaN ; ...  % e.g. 'EP' for EPI
-    'SequenceName',                 'SequenceName',             NaN ; ...
-    'ProtocolName',                 'ProtocolName',             NaN ; ...
-    ... % Further stuff for precalculation of RF correction
-    'RFSpoilingPhaseIncrement',     'RFSpoilingPhaseIncrement', 1 ; ...   % [°] defined in al_B1mapping and mtflash3d sequences
-    'spoilingGradientMoment',       'spoilingGradientMoment',   1 ; ...  % [T*s/m] defined in al_B1mapping and mtflash3d sequences
-    'spoilingGradientDuration',     'spoilingGradientDuration', 1 ...   % [s] defined in al_B1mapping and mtflash3d sequences
+    'ScanningSequence',             'ScanningSequence'          ; ... % e.g. 'EP' for EPI
+    'SequenceName',                 'SequenceName'              ; ...
+    'ProtocolName',                 'PulseSequenceDetails'      ; ...
+    ... % Further stuff for precalculation of RF correction, defined in al_B1mapping and mtflash3d sequences
+    'RFSpoilingPhaseIncrement',     'SpoilingRFPhaseIncrement'  ; ... % [deg] 
+    'spoilingGradientMoment',       'SpoilingGradientMoment'    ; ... % [T*s/m]
+    'spoilingGradientDuration',     'SpoilingGradientDuration'    ... % [s]
     };
 
-% If required, add a few more fieldnames
-% Those are explicitly listed in the 'get_metadata_val.m' function
+% BEP001 NOTE:
+% ~~~~~~~~~~~~ 
+% B1map parameters are not all defined in BEP001 yet or definition is not 
+% clear enough:
+% - new metadata fieldnames
+%   * B1mapNominalFAValues -> NominalFAValues \_ B1 mapping specific in MPM
+%   * B1mapMixingTime -> MixingTime           /
+%   * PhaseEncodingDirectionSign -> new one. 
+%     There exist a 'PhaseEncodingDirection' fieldname that encodes both 
+%     direction and sign, with value i,j,k,i-,j-,k-, but it seems rather
+%     complicated to extract....
+% - should be "better defined"(?) fieldnames
+%   * epiReadoutDuration -> TotalReadoutTime, assuming this fits the BEP001
+%     definition but it seems a bit vague as total RO time might be defined
+%     differently for different sequence. Plus what about parallel 
+%     acceleration techniques, accounted for or not?
+
+% 2/ Add some common stuff:
+% -------------------------
+extra_md = { ...
+    'Manufacturer',          'Manufacturer' ; ...
+    'ManufacturerModelName', 'ManufacturersModelName' ; ... % note the 's' difference !
+    'DeviceSerialNumber',    'DeviceSerialNumber' ; ...
+    'StationName',           'StationName' ; ...
+    'StationName',           'StationName' ; ...
+    'MagneticFieldStrength', 'MagneticFieldStrength' ...
+    };
+% since they are general parameters, put them on top
+metadata_MPM = [extra_md ; metadata_MPM ];
+
+% 3/ Add a few more fieldnames, if required
+% ----------------------------
+% Those are explicitly listed in the 'get_metadata_val.m' function but not
+% directly used in the current version of hMRI
 if strcmpi(opt,'full')
     full_md = { ...
-        'RepetitionTimes', 'RepetitionTimesExcitation', 1 ; ... % TRs [s] -> [s], note the extra 's' !
-        'BandwidthPerPixelRO',          'BandwidthPerPixelRO',          1 ; ...    % [Hz/pxl]
-        'PELinesPAT',                   'PELinesPAT',                   1 ; ...
+        'RepetitionTimes',      'RepetitionTimesExcitation' ; ... % TRs [s], note the extra 's' !
+        'BandwidthPerPixelRO',  'BandwidthPerPixelRO'       ; ... % [Hz/pxl]
+        'PELinesPAT',           'PELinesPAT'                  ...
         ... % size of the k-space PE dimension, taking into account Parallel
         ... % acceleration but not partial Fourier. Used to calculate the total
         ... % EPI Readout duration for FieldMap undistortion.
-        'NumberOfMeasurements',         'NumberOfMeasurements',         NaN ...  % Siemens-specific
         };
     metadata_MPM = [metadata_MPM ; full_md];
 end
+% BEP001 NOTE:
+% ~~~~~~~~~~~~ 
+% These fields are not necessarily defined within BEP001.
 
-% Add some common stuff:
-extra_md = { ...
-    'Manufacturer', 'Manufacturer', NaN ; ...
-    'ManufacturerModelName', 'ManufacturersModelName', NaN ; ... % note the 's' difference !
-    'DeviceSerialNumber', 'DeviceSerialNumber', NaN ; ...
-    'MagneticFieldStrength', 'MagneticFieldStrength', NaN };
-metadata_MPM = [metadata_MPM ; extra_md];
+% 4/ Add a few more recommended fields from BEP001
+% extra_md = {};
+% metadata_MPM = [metadata_MPM ; extra_md];
 
-% Save in .tsv file to be used later on
+% 5/ Save in .tsv file to be used later on
+% --------------------
 spm_save(fn_JSONtabl, metadata_MPM)
 
 end
