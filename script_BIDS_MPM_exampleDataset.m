@@ -33,7 +33,6 @@
 % - the B1+ maps is defined but no B1- map in the BEP001 so far
 % - for B1+ (and maybe B1-) maps, there is a specific suffix, B1plusmap
 %   (and maybe B1minusmap) but not for the B0 images.
-%   -> ALREADY DISCUSSED, KEEP B0 STUFF AS IT IS FOR BACK COMPATIBILITY
 % 
 % Dependencies:
 % =============
@@ -72,7 +71,7 @@ rootPth = 'C:\Dox\2_Data\hmri_sample_dataset_with_maps';
 % Subject label
 subj_label = 'anon';
 % Where the BIDS-ified data will be copied, bidsPth & subjPth
-bidsPth = fullfile(rootPth,'BIDS_dataset_v3');
+bidsPth = fullfile(rootPth,'BIDS_dataset_v2');
 if ~exist(bidsPth,'dir'), mkdir(bidsPth), end;
 subjPth = fullfile(bidsPth,sprintf('subj-%s',subj_label));
 if ~exist(subjPth,'dir'), mkdir(subjPth), end;
@@ -187,27 +186,31 @@ if ~exist(fmapPth,'dir'), mkdir(fmapPth), end;
 % 1/ Deal with 6 B1- maps(RF sensitivity), 3 mod-type x 2 acq-coils
 % -----------------------------------------------------------------
 % Filename structure
-fn_bids_B1m_struct = 'sub-%s_acq-%s_mod-%s_B1minusmap.nii';
+fn_bids_B1m_struct = 'sub-%s_acq-%s_B1minus.nii';
 % feed in "subject label", "acquisition type" (head/body), "modality" (MTw/PDw/T1w)
 
 % Filenames for the 3X2 types: (MTw, PDw, T1w) x (head/body)
-mod_label = { 'MTw' , 'PDw' , 'T1w' };
-acq_label = {'head', 'body'};
+acq_label = { ...
+    'MTwHead', 'MTwBody' ; ...
+    'PDwHead', 'PDwBody' ; ...
+    'T1wHead', 'T1wBody' };
+
 % and the corresponding folder in the data set structure
 pth_B1m = { ...
     'mfc_smaps_v1a_Array_0010' , 'mfc_smaps_v1a_QBC_0011' ;...
     'mfc_smaps_v1a_Array_0007' , 'mfc_smaps_v1a_QBC_0008' ;...
     'mfc_smaps_v1a_Array_0013' , 'mfc_smaps_v1a_QBC_0014' };
 
-for imod = 1:3
-    for iacq = 1:2
+for imod = 1:3 % (MTw, PDw, T1w)
+    for iacq = 1:2 % (head/body)
         pth_iSA = fullfile(rootPth,pth_B1m{imod,iacq});
         % a) Deal with images
         % Select the image file requested.
         fn_iSA_nii = spm_select('FPList',pth_iSA,'^.*\.nii$');
-        fn_bidsB1m_iAS_nii = fullfile(fmapPth, ...  % path
+        fn_bidsB1m_iAS_nii = fullfile( ...  % build fullpath filename
+            fmapPth, ... % path
             sprintf( fn_bids_B1m_struct, ...            % filename
-            subj_label, acq_label{iacq}, mod_label{imod} ) ); % feeds
+                        subj_label, acq_label{imod,iacq} ) ); % feeds
         % copy file with name change
         copyfile(fn_iSA_nii,fn_bidsB1m_iAS_nii);
         % b) Deal with JSON
@@ -221,7 +224,7 @@ end
 % 2/ Deal with B1+ (B1 bias correction), 11 FA x 2 acquisition types
 % ------------------------------------------------------------------
 % Filename structure
-fn_bids_B1p_struct = 'sub-%s_acq-%s_fa-%02d_B1plusmap.nii';
+fn_bids_B1p_struct = 'sub-%s_acq-%s_fa-%02d_B1plus.nii';
 % feed in "subject label", "acquisition type" (SE/STE), "flip angle" (index)
 acq_label = {'SE', 'STE'};
 
@@ -234,9 +237,10 @@ for ifa = 1:11
     for iacq = 1:2
         % a) Deal with images
         fn_iFA_nii = deblank(fn_B1plus{iacq}(ifa,:));
-        fn_bidsB1p_iFA_nii = fullfile(fmapPth, ...    % path
+        fn_bidsB1p_iFA_nii = fullfile( ... % build fullpath filename
+            fmapPth, ... % path
             sprintf( fn_bids_B1p_struct, ...      % filename
-            subj_label, acq_label{iacq}, ifa ) ); % feeds
+                    subj_label, acq_label{iacq}, ifa ) ); % feeds
         % copy file with name change
         copyfile(fn_iFA_nii,fn_bidsB1p_iFA_nii);
         % b) Deal with JSON
@@ -258,9 +262,10 @@ fn_B0mag_nii = spm_select('FPList',B0mag_pth,'^.*\.nii$');
 
 for ii=1:2
     % a) Deal with images
-    fn_bidsB0ii_nii = fullfile(fmapPth, ...    % path
+    fn_bidsB0ii_nii = fullfile( ... % build fullpath filename
+        fmapPth, ...    % path
         sprintf( fn_bids_B0mag_struct, ...      % filename
-        subj_label, ii ) );         % feeds
+                    subj_label, ii ) );         % feeds
     % copy file with name change
     copyfile(deblank(fn_B0mag_nii(ii,:)),fn_bidsB0ii_nii);
     % b) Deal with JSON
@@ -276,8 +281,9 @@ fn_bids_B0pdiff_struct = 'sub-%s_phasediff.nii';
 B0pdiff_pth = fullfile(rootPth,'gre_field_mapping_1acq_rl_0006');
 fn_B0pdiff_nii = spm_select('FPList',B0pdiff_pth,'^.*\.nii$');
 % a) Deal with images
-fn_bidsB0pdiff_nii = fullfile(fmapPth, ...    % path
-    sprintf( fn_bids_B0pdiff_struct, subj_label ) );
+fn_bidsB0pdiff_nii = fullfile( ... % build fullpath filename
+    fmapPth, ...    % path
+    sprintf( fn_bids_B0pdiff_struct, subj_label ) ); % filename
 % copy file with name change
 copyfile(fn_B0pdiff_nii,fn_bidsB0pdiff_nii);
 % b) Deal with JSON
@@ -286,7 +292,8 @@ fn_bidsB0pdiff_json = spm_file(fn_bidsB0pdiff_nii,'ext','json');
 % copy file with name change
 copyfile(fn_B0pdiff_json,fn_bidsB0pdiff_json);
 
-% Now update all JSON files
+% 4/ Now update all JSON files from fmap folder
+% ---------------------------------------------
 fn_jsonfmat = spm_select('FPList',fmapPth,'^.*\.json$');
 % In one go, using a single function to pull out all the postential fields
 % necessary for the MPM data
