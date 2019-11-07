@@ -15,20 +15,25 @@
 % Still missing/to check:
 % =======================
 % - turn this into a function with a few option flags as to how things are
-% done, especially what should be saved (full DICOM header?) or not.
+%   done, especially what should be saved (full DICOM header?) or not.
 % - add the required top metadata files describing the dataset and 
 %   participant
+%   -> PARTLY DONE
 % - for the 'fmap' images at the "IntendedFor" metadata
 % - gzip all images ('gzip' function)?
 % - check filenames convention                \_ according to BEP001 crowd
 % - check metadata list (names and definition)/
+%   -> PARTLY DONE
 % - check the units of metadata extracted
+%   -> LOOKS LIKE IT's SORTED
 % - the '_mod-*' is used for the B1- maps. These are not defined in BEP001
 %   so far. Moreover the filename '_mod-*' field is currently ONLY defined 
 %   for the case of '_defacemask.nii' images!
+%   -> COMBINE THINGS INTO THE '_acq-*' field
 % - the B1+ maps is defined but no B1- map in the BEP001 so far
 % - for B1+ (and maybe B1-) maps, there is a specific suffix, B1plusmap
 %   (and maybe B1minusmap) but not for the B0 images.
+%   -> ALREADY DISCUSSED, KEEP B0 STUFF AS IT IS FOR BACK COMPATIBILITY
 % 
 % Dependencies:
 % =============
@@ -67,7 +72,7 @@ rootPth = 'C:\Dox\2_Data\hmri_sample_dataset_with_maps';
 % Subject label
 subj_label = 'anon';
 % Where the BIDS-ified data will be copied, bidsPth & subjPth
-bidsPth = fullfile(rootPth,'BIDS_dataset');
+bidsPth = fullfile(rootPth,'BIDS_dataset_v3');
 if ~exist(bidsPth,'dir'), mkdir(bidsPth), end;
 subjPth = fullfile(bidsPth,sprintf('subj-%s',subj_label));
 if ~exist(subjPth,'dir'), mkdir(subjPth), end;
