@@ -1,10 +1,13 @@
+FieldnamesOriginal	FieldnamesBIDS
 Manufacturer	Manufacturer
 ManufacturerModelName	ManufacturersModelName
 DeviceSerialNumber	DeviceSerialNumber
 StationName	StationName
 StationName	StationName
 MagneticFieldStrength	MagneticFieldStrength
-FieldnamesOriginal	FieldnamesBIDS
+ScanningSequence	ScanningSequence
+SequenceName	SequenceName
+ProtocolName	PulseSequenceDetails
 RepetitionTime	RepetitionTimeExcitation
 EchoTime	EchoTime
 FlipAngle	FlipAngle
@@ -14,9 +17,6 @@ epiReadoutDuration	TotalReadoutTime
 PhaseEncodingDirectionSign	PhaseEncodingDirectionSign
 B1mapNominalFAValues	NominalFAValues
 B1mapMixingTime	MixingTime
-ScanningSequence	ScanningSequence
-SequenceName	SequenceName
-ProtocolName	PulseSequenceDetails
 RFSpoilingPhaseIncrement	SpoilingRFPhaseIncrement
 spoilingGradientMoment	SpoilingGradientMoment
 spoilingGradientDuration	SpoilingGradientDuration

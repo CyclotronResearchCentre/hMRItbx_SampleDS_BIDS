@@ -50,13 +50,17 @@ end
 
 %% Create table
 % =============
+metadata_origin = {'FieldnamesOriginal', 'FieldnamesBIDS'} ; 
 
 % 1/ MPM parameters only, 
 % -----------------------
 % from the calls to 'get_metadata_val.m' in the 'hmri_create_*.m' functions
 % and which are used to create the qMRI.
 metadata_MPM = {...
-    'FieldnamesOriginal',           'FieldnamesBIDS' ; ...
+    ... % Some names for scanning, sequence, etc.
+    'ScanningSequence',             'ScanningSequence'          ; ... % e.g. 'EP' for EPI
+    'SequenceName',                 'SequenceName'              ; ...
+    'ProtocolName',                 'PulseSequenceDetails'      ; ...
     ... % Main parameters: timing and RF
     'RepetitionTime',               'RepetitionTimeExcitation'  ; ... % TR [s]
     'EchoTime',                     'EchoTime'                  ; ... % TE [s]
@@ -70,10 +74,6 @@ metadata_MPM = {...
     ... % add for 3D_EPI used for al_B1mapping
     'B1mapNominalFAValues',         'NominalFAValues'           ; ... % [deg]
     'B1mapMixingTime',              'MixingTime'                ; ... % [s]
-    ... % Some names for scanning, sequence, etc.
-    'ScanningSequence',             'ScanningSequence'          ; ... % e.g. 'EP' for EPI
-    'SequenceName',                 'SequenceName'              ; ...
-    'ProtocolName',                 'PulseSequenceDetails'      ; ...
     ... % Further stuff for precalculation of RF correction, defined in al_B1mapping and mtflash3d sequences
     'RFSpoilingPhaseIncrement',     'SpoilingRFPhaseIncrement'  ; ... % [deg] 
     'spoilingGradientMoment',       'SpoilingGradientMoment'    ; ... % [T*s/m]
@@ -135,6 +135,8 @@ end
 
 % 5/ Save in .tsv file to be used later on
 % --------------------
+% Put the top line with origin
+metadata_MPM = [metadata_origin ; metadata_MPM];
 spm_save(fn_JSONtabl, metadata_MPM)
 
 end
