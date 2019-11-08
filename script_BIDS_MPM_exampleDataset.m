@@ -12,6 +12,43 @@
 %  This works similarly for the RFsens (B1-) and B1map (B0 and B1+) field
 %  maps.
 % 
+% Operations
+% ==========
+% I. Deal with the anatomical images
+% 1/ Get the filenames for the 3 types (MTw/PDw/T1w) of anatomical images
+% 2/ Move and rename anatomical images 
+% 3/ update corresponding json file
+% 
+% II. Deal with the field maps
+% Work with the 3 different types of maps one at a time:
+% 1/ Deal with 6 B1- maps(RF sensitivity), 3 mod-type x 2 acq-coils
+%    B1minus = RF sensitivity, 2 images per anatomical image type
+%    -> modality (mod-MTw/PDw/T1w), acquisition (acq-head/body)
+% 2/ Deal with B1+ (B1 bias correction), 11 FA x 2 acquisition types
+%    B1plus = emission with 22 images 
+%    -> echo index
+% 3/ Deal with B0, 2 magnitude + 1 phase difference image
+%    B0 = classic field maps. 2 magnitude + 1 phase diff
+%    -> part-magnitude1/magnitude2/phasediff
+% 4/ Now update all JSON files from fmap folder
+% 
+% 
+% Dependencies:
+% =============
+% - a function called "hmri_BIDSify_json.m" to refactor the metadata from 
+%   the DICOM header. This itself relies on the get_metadata_val.m function
+%   from the hMRI toolbox
+% - a tab-separated-value file, JSONtabl_dcm2bids.tsv, with the list of 
+%   metadata fields required.
+% These 2 are already on the hMRI private github server in Leipzig
+% -> need to keep track of these.
+%__________________________________________________________________________
+% Copyright (C) 2019 GIGA Institute
+
+% Written by C. Phillips, 2019.
+% Cyclotron Research Centre, University of Liege, Belgium
+
+%__________________________________________________________________________
 % Still missing/to check:
 % =======================
 % - turn this into a function with a few option flags as to how things are
@@ -32,24 +69,10 @@
 %   -> COMBINE THINGS INTO THE '_acq-*' field
 % - the B1+ maps is defined but no B1- map in the BEP001 so far
 % - for B1+ (and maybe B1-) maps, there is a specific suffix, B1plusmap
-%   (and maybe B1minusmap) but not for the B0 images.
-% 
-% Dependencies:
-% =============
-% - a function called "hmri_BIDSify_json.m" to refactor the metadata from 
-%   the DICOM header. This itself relies on the get_metadata_val.m function
-%   from the hMRI toolbox
-% - a tab-separated-value file, JSONtabl_dcm2bids.tsv, with the list of 
-%   metadata fields required.
-% These 2 are already on the hMRI private github server in Leipzig
-% -> need to keep track of these.
+%   (and maybe B1minusmap). Or should it be 'B1plus' and B1minus'.
 %__________________________________________________________________________
-% Copyright (C) 2019 GIGA Institute
-
-% Written by C. Phillips, 2019.
-% Cyclotron Research Centre, University of Liege, Belgium
-
-% NOTES:
+% NOTES on hMRI toolbox:
+% ======================
 % 1/ It could be useful to create a batch-GUI to select (semi-)manually the
 % data in order to figure out what is really at hand
 % -> one can reuse the "get_*_params.m" functions
@@ -61,8 +84,9 @@
 % 2/ The RF sensitivity correction step DOES modify the whole data
 % structure as available in the 'job' variable. This is a bad idea but this
 % also makes the filenames available in the mpm_params.mat structure
-% unusable since the "intermediate" files listed do not exist anymore at
+% not usable since the "intermediate" files listed do not exist anymore at
 % the end of the map creation process...
+%__________________________________________________________________________
 
 %% Some defaults
 
@@ -76,7 +100,7 @@ if ~exist(bidsPth,'dir'), mkdir(bidsPth), end;
 subjPth = fullfile(bidsPth,sprintf('subj-%s',subj_label));
 if ~exist(subjPth,'dir'), mkdir(subjPth), end;
 
-%% Deal with the anatomical images
+%% I. Deal with the anatomical images
 
 % 1/ Get the filenames for the 3 types (MTw, PDw, T1w) of anatomical images
 % -------------------------------------------------------------------------
@@ -97,8 +121,8 @@ fn_MPM{2} = spm_select('FPList',pth_PDw,'^.*\.nii$');
 pth_T1w = fullfile(rootPth,pth_MPM{3});
 fn_MPM{3} = spm_select('FPList',pth_T1w,'^.*\.nii$');
 
-% 2/ Move and rename anatomical images + update corresponding json file
-% ---------------------------------------------------------------------
+% 2/ Move and rename anatomical images 
+% ------------------------------------
 % Filename structure
 fn_bids_struct = 'sub-%s_echo-%d_acq-%s_MPM.%s';
 % feed in "subject label", "echo index", "acqusition sequence", "extension"
@@ -131,6 +155,9 @@ for iseq = 1:3 % 3 types of sequences (MTw, PDw, T1w) *in that order*!
         fprintf('\nNo %s filed.\n',seq_label{iseq});
     end
 end
+
+% 3/ update corresponding json file
+% ---------------------------------
 % Now update all JSON files
 fn_jsonAnat = spm_select('FPList',anatPth,'^.*\.json$');
 % In one go, using a single function to pull out all the potential fields
@@ -170,7 +197,7 @@ fn_jsonAnat_BIDS = hmri_BIDSify_json(fn_jsonAnat);
 %     end
 % end
 
-%% Deal with the field maps
+%% II. Deal with the field maps
 % Work with the 3 different types of maps one at a time:
 % - B1minus = RF sensitivity, 2 images per anatomical image type
 %   -> modality (mod-MTw/PDw/T1w), acquisition (acq-head/body)
