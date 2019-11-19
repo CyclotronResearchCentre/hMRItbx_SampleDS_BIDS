@@ -102,7 +102,7 @@ subj_label = 'anon';
 % Where the BIDS-ified data will be copied, bidsPth & subjPth
 bidsPth = fullfile(rootPth,'BIDS_dataset_v3');
 if ~exist(bidsPth,'dir'), mkdir(bidsPth), end;
-subjPth = fullfile(bidsPth,sprintf('subj-%s',subj_label));
+subjPth = fullfile(bidsPth,sprintf('sub-%s',subj_label));
 if ~exist(subjPth,'dir'), mkdir(subjPth), end;
 
 %% I. Deal with the anatomical images
