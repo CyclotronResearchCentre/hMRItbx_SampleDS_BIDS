@@ -3,7 +3,6 @@ Manufacturer	Manufacturer
 ManufacturerModelName	ManufacturersModelName
 DeviceSerialNumber	DeviceSerialNumber
 StationName	StationName
-StationName	StationName
 MagneticFieldStrength	MagneticFieldStrength
 ScanningSequence	ScanningSequence
 SequenceName	SequenceName
@@ -11,7 +10,7 @@ ProtocolName	PulseSequenceDetails
 RepetitionTime	RepetitionTimeExcitation
 EchoTime	EchoTime
 FlipAngle	FlipAngle
-MT	MTstate
+MT	MTState
 NumberOfMeasurements	NumberShots
 epiReadoutDuration	TotalReadoutTime
 PhaseEncodingDirectionSign	PhaseEncodingDirectionSign
