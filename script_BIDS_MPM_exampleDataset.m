@@ -317,23 +317,27 @@ end
 % add "IntendedFor" fieldname, for each modality
 
 % BIDSify all at once
-fn_jsonfmat_BIDS_all = hmri_BIDSify_json( ...
-    char(fn_bidsB1p_iFA_json(:)), BIDSjson_options);
-for ii=1:size(fn_jsonfmat_BIDS_all,1)
-    % Keep 1st name from Manufacturer
-    Json_ii = spm_load(fn_jsonfmat_BIDS_all(ii,:));
-    if iscell(Json_ii.Manufacturer)
-        Json_ii.Manufacturer = Json_ii.Manufacturer{1};
+for iacq=1:size(fn_bidsB1p_iFA_json,2)
+    % separate by acquisition type (STE vs. SE) to prevent character
+    % padding
+    fn_jsonfmat_BIDS_all = hmri_BIDSify_json( ...
+        char(fn_bidsB1p_iFA_json(:,iacq)), BIDSjson_options);
+    for ii=1:size(fn_jsonfmat_BIDS_all,1)
+        % Keep 1st name from Manufacturer
+        Json_ii = spm_load(fn_jsonfmat_BIDS_all(ii,:));
+        if iscell(Json_ii.Manufacturer)
+            Json_ii.Manufacturer = Json_ii.Manufacturer{1};
+        end
+        % Add IntendedFor information -> MPMw images
+        Json_ii.IntendedFor = spm_file(char(fn_bidsMPMw(:)),'path','anat/');
+        if strcmp(filesep,'\')
+            % Make sure the relative path uses '/' and not '\'
+            Json_ii.IntendedFor = ...
+                char(regexprep(cellstr(Json_ii.IntendedFor),'\\','/'));
+        end
+        % Save the updated version
+        spm_save(fn_jsonfmat_BIDS_all(ii,:), Json_ii, struct('indent','  '))
     end
-    % Add IntendedFor information -> MPMw images
-    Json_ii.IntendedFor = spm_file(char(fn_bidsMPMw(:)),'path','anat/');
-    if strcmp(filesep,'\')
-        % Make sure the relative path uses '/' and not '\'
-        Json_ii.IntendedFor = ...
-            char(regexprep(cellstr(Json_ii.IntendedFor),'\\','/'));
-    end
-    % Save the updated version
-    spm_save(fn_jsonfmat_BIDS_all(ii,:), Json_ii, struct('indent','  '))
 end
 
 % 3/ Deal with B0, 2 magnitude + 1 phase difference image
@@ -383,18 +387,25 @@ fn_B0pdiff_json = spm_file(fn_B0pdiff_nii,'ext','json');
 fn_bidsB0pdiff_json = spm_file(fn_bidsB0pdiff_nii,'ext','json');
 % copy file with name change
 copyfile(fn_B0pdiff_json,fn_bidsB0pdiff_json);
-fn_bidsB0_json = char(fn_bidsB0_json, fn_bidsB0pdiff_json);
+fn_bidsB0_json = char(fn_bidsB0_json);
 fn_bidsB0_json(1,:) = [];
+
+fn_bidsB0pdiff_json = char(fn_bidsB0pdiff_json);
 
 % 3.b/ BIDSify JSON & fix it
 % --------------------------
 % 'Manufacturer' field has 3 names are returned -> keep 1st one only
 % add "IntendedFor" fieldname, for each modality
 fn_bidsB0_json = hmri_BIDSify_json(fn_bidsB0_json, BIDSjson_options);
+fn_bidsB0pdiff_json = hmri_BIDSify_json(fn_bidsB0pdiff_json, ...
+    BIDSjson_options);
+
+% convert to cell array of strings in order to prevent empty space padding
+fn_bidsB0_json = [cellstr(fn_bidsB0_json); cellstr(fn_bidsB0pdiff_json)];
 
 for ii=1:size(fn_bidsB0_json,1)
     % Keep 1st name from Manufacturer
-    Json_ii = spm_load(fn_bidsB0_json(ii,:));
+    Json_ii = spm_load(char(fn_bidsB0_json(ii,:)));
     if iscell(Json_ii.Manufacturer)
         Json_ii.Manufacturer = Json_ii.Manufacturer{1};
     end
@@ -406,7 +417,7 @@ for ii=1:size(fn_bidsB0_json,1)
             char(regexprep(cellstr(Json_ii.IntendedFor),'\\','/'));
     end
     % Save the updated version
-    spm_save(fn_bidsB0_json(ii,:), Json_ii, struct('indent','  '))
+    spm_save(char(fn_bidsB0_json(ii,:)), Json_ii, struct('indent','  '))
 end
 
 % % 4/ Now update all JSON files from fmap folder
