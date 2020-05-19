@@ -59,6 +59,21 @@
 % B1-/B1+/B0 "field maps" in BIDS 
 % -> we will abide by the general BIDS principles, as well as those
 % introduced for these multi-contrast/-echo structural images
+% 
+% MAJOR ASSUMPTIONS:
+% ==================
+% Since this is ad hoc code for the hMRI example Dataset, I make these
+% assumptions about their acquistion order and properties:
+% - for each contrast (MTw/PDw/T1w), the various echoes are acquired in
+%   *ascending* order 
+% - the flip angle will be low for the MTw/PDw images and high for the T1w
+%   images
+% => no need to worry about EchoTime/FlipAngle JSON values and 'echo'/'fa' 
+%    indexable metadata value when creating the BIDS-format JSON files and 
+%    BIDS-renaming the image files
+% Ideally these assumptions should be lifted: the actual echo time and flip
+% angle would be read from the JSON files and the indexable filename
+% metadata ordered accordingly.
 %__________________________________________________________________________
 % Copyright (C) 2019 GIGA Institute
 
@@ -124,7 +139,7 @@ pth_MPM = { ...
     't1w_mfc_3dflash_v1i_R4_0015' };
 
 % Get all the FP-filenames from the 3 folders for the 3 sequences
-fn_MPM = cell(3,1) ; % empty cell array for filenames
+fn_MPM = cell(3,1) ; % empty cell array for filenames (MTw, PDw, T1w)
 for ii=1:3
     pth_ii = fullfile(pth_Root,pth_MPM{ii});
     fn_MPM{ii} = spm_select('FPList',pth_ii,'^.*\.nii$');
@@ -133,11 +148,32 @@ end
 % 2/ Move and rename anatomical images
 % ------------------------------------
 % Filename structure
-fn_bids_struct = 'sub-%s_echo-%d_acq-%s_MPM.nii';
-% feed in "subject label", "echo index", and "acqusition sequence".
-% According to BEP001, multi-echo anatomical images acquired with the MPM
-% protocal should be of type '_MPM'. The contrast (MT/PD/T1-weighted) is
-% only an acquisition parameter -> in the '_acq-***_' part of the filename
+fn_bids_struct = 'sub-%s_echo-%d_fa-%d_mt-%s_acq-%s_MPM.nii';
+% Feed in 
+% - 'sub' -> subject label, 
+% - 'echo' -> echo index ,
+% - 'fa' -> flip angle index,
+% - 'mt' -> magnetization transfer 'on' or 'off'
+% - 'acq' -> option free-form contrast info, kept for human readability
+% 
+% Since this is an MPM acquisition protocol, the filename suffix is '_MPM'. 
+% Key "multiple parameters" info are in the indexable key/value pairs
+% 'echo', 'fa', and 'mt'. Image contrast (MTw/PDw/T1w) is only optional 
+% here and set in the 'acq' key/value pair.
+% 
+% Assumptions:
+% - for each contrast (MTw/PDw/T1w), the various echoes are acquired in
+%   *ascending* order 
+%   -> use their listing order for the 'echo' indexable metadata
+% - the flip angle will be low for the MTw/PDw images and high for the T1w
+%   images 
+%   -> define a priori 'fa-1' and 'fa-2' for MTw/PDw and T1w resp.
+% - magentization transfer only occurs for the MTw images
+%   -> define a priori 'mt-on' and 'mt-off' for MTw and PDw/T1w resp.
+fa_mt_values = { ...
+    1 , 'on'  ; ... % MTw
+    1 , 'off' ; ... % PDw
+    2 , 'off'};     % T1w
 
 % 'anat' folder: define & create as needed
 pth_anat = fullfile(pth_Subj,'anat');
@@ -153,15 +189,18 @@ for iseq = 1:3 % 3 types of sequences (MTw, PDw, T1w) *in that order*!
     if nMPMw_ii
         for ii=1:nMPMw_ii
             % a) deal with image files
-            % create fullpath filename for i^th anatomical image
-            fn_bidsMPMw_ii = fullfile(pth_anat, ...  % path
-                sprintf( fn_bids_struct, ...            % filename
-                subj_label, ii, seq_label{iseq} ) ); % feeds
+            % create filename for i^th anatomical image
+            fn_bidsMPMw_ii = sprintf( fn_bids_struct, ...  
+                subj_label, ii, fa_mt_values{iseq,1}, ...
+                fa_mt_values{iseq,2}, seq_label{iseq} ) ; % feeds
+            % add the path
+            fn_bidsMPMw_ii = fullfile(pth_anat, fn_bidsMPMw_ii ); 
+            % stack up
             fn_bidsMPMw{iseq} = char(fn_bidsMPMw{iseq}, fn_bidsMPMw_ii);
             % copy file with name change
             copyfile(fn_MPM{iseq}(ii,:),fn_bidsMPMw_ii);
             % b) deal with JSON files
-            % -> copy with right name then convert them all
+            % -> copy with right name then convert them all later on!
             fn_json_in = spm_file(fn_MPM{iseq}(ii,:),'ext','json');
             fn_json_out = spm_file(fn_bidsMPMw_ii,'ext','json');
             copyfile(fn_json_in,fn_json_out)
@@ -420,7 +459,7 @@ end
 % % 4/ Now update all JSON files from fmap folder
 % % ---------------------------------------------
 % fn_jsonfmat = spm_select('FPList',pth_fmap,'^.*\.json$');
-% % In one go, using a single function to pull out all the postential fields
+% % In one go, using a single function to pull out all the potential fields
 % % necessary for the MPM data
 % fn_jsonfmat_BIDS = hmri_BIDSify_json(fn_jsonfmat);
 
