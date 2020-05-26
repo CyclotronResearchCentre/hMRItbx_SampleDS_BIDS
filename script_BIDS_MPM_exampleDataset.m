@@ -26,15 +26,16 @@
 % II. Deal with the field maps
 % ----------------------------
 % Work with the 3 different types of field maps one at a time:
-% 1/ Deal with 6 B1- maps (RF sensitivity), 3 mod-type x 2 acq-coils
-%    B1minus = RF sensitivity, 2 images per anatomical image type
-%    -> modality (mod-MTw/PDw/T1w), acquisition (acq-head/body)
-% 2/ Deal with B1+ (B1 bias correction), 11 FA x 2 acquisition types
-%    B1plus = emission with 22 images
-%    -> echo index
+% 1/ Deal with 6 B1- maps (RF sensitivity), 3 types x 2 coils
+%    B1minus = RF sensitivity = suffix '_RB1COR'
+%    -> spcecify 6 acquisitions : _acq-[MTw/PDw/T1w]/[head/body]
+% 2/ Deal with B1+ (B1 emission bias correction), 11 FA x 2 echo types
+%    B1plus = Transmit = suffix '_TB1EPI' 
+%    -> specify _echo-[1/2] and _FA-[1...11] indexes, 
+%       where echo-1/2 matches SE/STE echoes
 % 3/ Deal with B0, 2 magnitude + 1 phase difference image
 %    B0 = classic field maps with 2 magnitude + 1 phase diff images
-%    -> part-magnitude1/magnitude2/phasediff
+%    -> specify _part-magnitude1/magnitude2/phasediff
 % 
 % The JSON files are BIDSified and updated for each type of fieldmap images
 % because the 'IntendedFor' is fieldmap specific
@@ -68,7 +69,7 @@
 %   *ascending* order 
 % - the flip angle will be low for the MTw/PDw images and high for the T1w
 %   images
-% => no need to worry about EchoTime/FlipAngle JSON values and 'echo'/'fa' 
+% => no need to check EchoTime/FlipAngle JSON values to define 'echo'/'fa' 
 %    indexable metadata value when creating the BIDS-format JSON files and 
 %    BIDS-renaming the image files
 % Ideally these assumptions should be lifted: the actual echo time and flip
@@ -85,19 +86,9 @@
 % =======================
 % - turn this into a function with a few option flags as to how things are
 %   done, especially what should be saved (full DICOM header?) or not.
-% - gzip all images ('gzip' function)?
-% - check filenames convention                \_ according to BEP001 crowd
-% - check metadata list (names and definition)/
-%   -> PARTLY DONE
-% - check the units of metadata extracted
-%   -> LOOKS LIKE IT's SORTED
-% - the '_mod-*' is used for the B1- maps. These are not defined in BEP001
-%   so far. Moreover the filename '_mod-*' field is currently ONLY defined
-%   for the case of '_defacemask.nii' images!
-%   -> COMBINE THINGS INTO THE '_acq-*' field -> DONE
-% - the B1+ maps is defined but no B1- map in the BEP001 so far
-% - for B1+ (and maybe B1-) maps, there is a specific suffix, B1plusmap
-%   (and maybe B1minusmap). Or should it be 'B1plus' and B1minus'.
+% - for the B1+/B1- images, the 'IntendedFor' field is repeated for all the 
+%   files. It could be useful to put these in a separate JSON file, that 
+%   would be applicable to all the B1plus.json files.
 %__________________________________________________________________________
 
 % NOTES on hMRI toolbox:
@@ -120,9 +111,7 @@
 %% Some defaults
 
 % Add subfolder with code to read metadata:
-addpath(fullfile( ...
-    'C:\Dox\1_Code\hMRI_sampledataset_code\hMRItbx_SampleDS_BIDS', ...
-    'metadata'))
+% addpath('C:\Dox\1_Code\hMRI_sampledataset_code\hMRItbx_SampleDS_BIDS\metadata')
 
 % Main folder with the data
 pth_Root = 'C:\Dox\2_Data\hmri_sample_dataset_with_maps';
@@ -154,18 +143,20 @@ end
 % 2/ Move and rename anatomical images
 % ------------------------------------
 % Filename structure
-fn_bids_struct = 'sub-%s_echo-%d_fa-%d_mt-%s_acq-%s_MPM.nii';
+fn_bids_struct = 'sub-%s_acq-%s_echo-%d_fa-%d_mt-%s_MPM.nii';
 % Feed in 
 % - 'sub' -> subject label, 
-% - 'echo' -> echo index ,
+% - 'acq' -> free-form contrast info (MTw,PDw,T1w), kept for human readability
+% - 'echo' -> echo index,
 % - 'fa' -> flip angle index,
 % - 'mt' -> magnetization transfer 'on' or 'off'
-% - 'acq' -> option free-form contrast info, kept for human readability
 % 
-% Since this is an MPM acquisition protocol, the filename suffix is '_MPM'. 
-% Key "multiple parameters" info are in the indexable key/value pairs
-% 'echo', 'fa', and 'mt'. Image contrast (MTw/PDw/T1w) is only optional 
-% here and set in the 'acq' key/value pair.
+% Since this is an MPM acquisition protocol, 
+% - the filename suffix is '_MPM'. 
+% - key "multiple parameters" info are in the indexable key/value pairs
+%   'echo', 'fa', and 'mt'. 
+% - image contrast (MTw/PDw/T1w) is only optional here and set in the 'acq'
+%   key/value pair.
 % 
 % Assumptions:
 % - for each contrast (MTw/PDw/T1w), the various echoes are acquired in
@@ -197,8 +188,8 @@ for iseq = 1:3 % 3 types of sequences (MTw, PDw, T1w) *in that order*!
             % a) deal with image files
             % create filename for i^th anatomical image
             fn_bidsMPMw_ii = sprintf( fn_bids_struct, ...  
-                subj_label, ii, fa_mt_values{iseq,1}, ...
-                fa_mt_values{iseq,2}, seq_label{iseq} ) ; % feeds
+                subj_label, seq_label{iseq}, ii, fa_mt_values{iseq,1}, ...
+                fa_mt_values{iseq,2} ) ; % feeds
             % add the path
             fn_bidsMPMw_ii = fullfile(pth_anat, fn_bidsMPMw_ii ); 
             % stack up
@@ -244,15 +235,16 @@ end
 
 %% II. Deal with the field maps
 % Work with the 3 different types of maps one at a time:
-% 1/ B1minus = RF sensitivity, 2 images per anatomical image type
-%   2 options, use both 'mod-' & 'acq-' or only 'acq-'
-%   > modality & acquisition:  _mod-MTw/PDw/T1w_ & _acq-head/body_
-%   > acquisition only: _acq-MTw/PDw/T1w//head/body_
-%   given 'mod-' is reserved for defacemask, use the latter with 'acq-'
-% 2/ B1plus = emission with 22 images
-%   -> echo index
-% 3/ B0 = classic field maps. 2 magnitude + 1 phase diff
-%   -> part-magnitude1/magnitude2/phasediff
+% 1/ Deal with 6 B1- maps (RF sensitivity), 3 types x 2 coils
+%    B1minus = RF sensitivity = suffix '_RB1COR'
+%    -> spcecify 6 acquisitions : _acq-[MTw/PDw/T1w]/[head/body]
+% 2/ Deal with B1+ (B1 emission bias correction), 11 FA x 2 echo types
+%    B1plus = Transmit = suffix '_TB1EPI' 
+%    -> specify _echo-[1/2] and _FA-[1...11] indexes, 
+%       where echo-1/2 matches SE/STE echoes
+% 3/ Deal with B0, 2 magnitude + 1 phase difference image
+%    B0 = classic field maps with 2 magnitude + 1 phase diff images
+%    -> specify _part-magnitude1/magnitude2/phasediff
 
 % 0/ Create appropriate 'fmap' folder
 % 'fmap' folder: define & create as needed
@@ -267,15 +259,15 @@ BIDSjson_options = struct(...
 
 % 1/ Deal with B1- maps(RF sensitivity), 
 % --------------------------------------
-% Keeping in mind there are 6 images: 3 mod-type x 2 acq-coils
+% Keeping in mind there are 6 images: 3 types x 2 coils
 
 % 1.a/ Deal with all the file moving & renaming
 % .............................................
 % Filename structure
-fn_bids_B1m_struct = 'sub-%s_acq-%s_B1minus.nii';
+fn_bids_B1m_struct = 'sub-%s_acq-%s_RB1COR.nii';
 % feed in 
 % - "subject label", 
-% - "acquisition type" (head/body) \_ in the acq field
+% - "acquisition type" (head/body) \_ in the '_acq-' field
 % - "modality" (MTw/PDw/T1w)       /
 
 % Filename tags for the 3X2 types: (MTw, PDw, T1w) x (head/body)
@@ -284,7 +276,7 @@ acq_label = { ...
     'PDwHead', 'PDwBody' ; ...
     'T1wHead', 'T1wBody' };
 
-% and the corresponding foldesr in the data set structure
+% and the corresponding folders in the data set structure
 pth_B1m = { ...
     'mfc_smaps_v1a_Array_0010' , 'mfc_smaps_v1a_QBC_0011' ;...
     'mfc_smaps_v1a_Array_0007' , 'mfc_smaps_v1a_QBC_0008' ;...
@@ -343,22 +335,22 @@ end
 
 % 2/ Deal with B1+ (B1 bias correction)
 % -------------------------------------
-% Keeping in mind there are 22 images: 11 FA x 2 acquisition types
+% Keeping in mind there are 22 images: 11 FA x 2 echo types
+% where echo-1/2 matches SE/STE echoes
 
 % 2.a/ Deal with all the file moving & renaming
 % .............................................
 % Filename structure
-fn_bids_B1p_struct = 'sub-%s_fa-%02d_acq-%s_B1plus.nii';
+fn_bids_B1p_struct = 'sub-%s_echo-%1d_fa-%02d_TB1EPI.nii';
 % feed in 
 % - "subject label", 
+% - "echo (index) for SE/STE echoes (1/2)
 % - "flip angle" (index)
-% - "acquisition type" (SE/STE), 
-acq_label = {'SE', 'STE'};
 
 % Select the images for the SE/STE acquisition
 pth_B1p = fullfile(pth_Root,'mfc_seste_b1map_v1e_0004');
-fn_B1plus{1} = spm_select('FPList',pth_B1p,'^.*-1\.nii$');
-fn_B1plus{2} = spm_select('FPList',pth_B1p,'^.*-2\.nii$');
+fn_B1p{1} = spm_select('FPList',pth_B1p,'^.*-1\.nii$');
+fn_B1p{2} = spm_select('FPList',pth_B1p,'^.*-2\.nii$');
 
 % BIDSified filenames
 fn_bidsB1p_iFA_nii = cell(1,2);
@@ -369,10 +361,9 @@ for iacq = 1:2
     fn_bidsB1p_iFA_json{iacq} = '';
     for ifa = 1:11
         % a) Deal with images
-        fn_iFA_nii = deblank(fn_B1plus{iacq}(ifa,:));
+        fn_iFA_nii = deblank(fn_B1p{iacq}(ifa,:));
         fn_bidsB1p_nii = fullfile( pth_fmap, ... % path
-            sprintf( fn_bids_B1p_struct, ...      % filename
-                subj_label, ifa, acq_label{iacq} ) ); % feeds
+            sprintf( fn_bids_B1p_struct, subj_label, iacq, ifa ) ); % fname
         fn_bidsB1p_iFA_nii{iacq} = char(fn_bidsB1p_iFA_nii{iacq}, ...
             fn_bidsB1p_nii);
         % copy file with name change
@@ -414,9 +405,6 @@ for ii=1:size(fn_jsonfmat_BIDS_all,1)
     % Save the updated version
     spm_save(fn_jsonfmat_BIDS_all(ii,:), Json_ii, struct('indent','  '))
 end
-
-% One option could be to put the 'IntendedFor' field in a separate JSON
-% file, that would be applicable to all the B1plus.json files?
 
 % 3/ Deal with B0
 % ---------------
