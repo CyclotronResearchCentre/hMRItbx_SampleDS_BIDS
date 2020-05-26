@@ -33,7 +33,7 @@
 %    B1plus = emission with 22 images
 %    -> echo index
 % 3/ Deal with B0, 2 magnitude + 1 phase difference image
-%    B0 = classic field maps. 2 magnitude + 1 phase diff
+%    B0 = classic field maps with 2 magnitude + 1 phase diff images
 %    -> part-magnitude1/magnitude2/phasediff
 % 
 % The JSON files are BIDSified and updated for each type of fieldmap images
@@ -99,6 +99,7 @@
 % - for B1+ (and maybe B1-) maps, there is a specific suffix, B1plusmap
 %   (and maybe B1minusmap). Or should it be 'B1plus' and B1minus'.
 %__________________________________________________________________________
+
 % NOTES on hMRI toolbox:
 % ======================
 % 1/ It could be useful to create a batch-GUI to select (semi-)manually the
@@ -117,6 +118,11 @@
 %__________________________________________________________________________
 
 %% Some defaults
+
+% Add subfolder with code to read metadata:
+addpath(fullfile( ...
+    'C:\Dox\1_Code\hMRI_sampledataset_code\hMRItbx_SampleDS_BIDS', ...
+    'metadata'))
 
 % Main folder with the data
 pth_Root = 'C:\Dox\2_Data\hmri_sample_dataset_with_maps';
@@ -213,11 +219,17 @@ end
 
 % 3/ update corresponding json file
 % ---------------------------------
+% JSON files: keep 'history' but remove 'acqpar'
+BIDSjson_options = struct(...
+    'keep_acqpar' , false, ...
+    'keep_history', true, ...
+    'addfield'    , '') ;
+
 % Now update all JSON files
 fn_jsonAnat = spm_select('FPList',pth_anat,'^.*\.json$');
 % In one go, using a single function to pull out all the potential fields
 % necessary for the MPM data
-fn_jsonAnat_BIDS = hmri_BIDSify_json(fn_jsonAnat);
+fn_jsonAnat_BIDS = hmri_BIDSify_json(fn_jsonAnat, BIDSjson_options);
 
 % 4/ Need some hot-fix for the 'Manufacturer' field.
 % --------------------------------------------------
@@ -232,36 +244,47 @@ end
 
 %% II. Deal with the field maps
 % Work with the 3 different types of maps one at a time:
-% - B1minus = RF sensitivity, 2 images per anatomical image type
-%   -> modality (mod-MTw/PDw/T1w), acquisition (acq-head/body)
-% - B1plus = emission with 22 images
+% 1/ B1minus = RF sensitivity, 2 images per anatomical image type
+%   2 options, use both 'mod-' & 'acq-' or only 'acq-'
+%   > modality & acquisition:  _mod-MTw/PDw/T1w_ & _acq-head/body_
+%   > acquisition only: _acq-MTw/PDw/T1w//head/body_
+%   given 'mod-' is reserved for defacemask, use the latter with 'acq-'
+% 2/ B1plus = emission with 22 images
 %   -> echo index
-% - B0 = classic field maps. 2 magnitude + 1 phase diff
+% 3/ B0 = classic field maps. 2 magnitude + 1 phase diff
 %   -> part-magnitude1/magnitude2/phasediff
 
+% 0/ Create appropriate 'fmap' folder
 % 'fmap' folder: define & create as needed
 pth_fmap = fullfile(pth_Subj,'fmap');
 if ~exist(pth_fmap,'dir'), mkdir(pth_fmap), end;
 
-% JSON files: keep history & acqpar + add 'IntendedFor'
+% JSON files: keep 'history' + add 'IntendedFor' but remove 'acqpar'
 BIDSjson_options = struct(...
-    'keep_acqpar' , true, ...
+    'keep_acqpar' , false, ...
     'keep_history', true, ...
     'addfield'    , 'IntendedFor') ;
 
-% 1.a/ Deal with 6 B1- maps(RF sensitivity), 3 mod-type x 2 acq-coils
-% -----------------------------------------------------------------
+% 1/ Deal with B1- maps(RF sensitivity), 
+% --------------------------------------
+% Keeping in mind there are 6 images: 3 mod-type x 2 acq-coils
+
+% 1.a/ Deal with all the file moving & renaming
+% .............................................
 % Filename structure
 fn_bids_B1m_struct = 'sub-%s_acq-%s_B1minus.nii';
-% feed in "subject label", "acquisition type" (head/body), "modality" (MTw/PDw/T1w)
+% feed in 
+% - "subject label", 
+% - "acquisition type" (head/body) \_ in the acq field
+% - "modality" (MTw/PDw/T1w)       /
 
-% Filenames for the 3X2 types: (MTw, PDw, T1w) x (head/body)
+% Filename tags for the 3X2 types: (MTw, PDw, T1w) x (head/body)
 acq_label = { ...
     'MTwHead', 'MTwBody' ; ...
     'PDwHead', 'PDwBody' ; ...
     'T1wHead', 'T1wBody' };
 
-% and the corresponding folder in the data set structure
+% and the corresponding foldesr in the data set structure
 pth_B1m = { ...
     'mfc_smaps_v1a_Array_0010' , 'mfc_smaps_v1a_QBC_0011' ;...
     'mfc_smaps_v1a_Array_0007' , 'mfc_smaps_v1a_QBC_0008' ;...
@@ -278,8 +301,8 @@ for imod = 1:3 % (MTw, PDw, T1w)
         fn_iSA_nii = spm_select('FPList',pth_iSA,'^.*\.nii$');
         fn_bidsB1m_iAS_nii{imod,iacq} = ...
             fullfile( pth_fmap, ...  % build fullpath filename
-            sprintf( fn_bids_B1m_struct, ...            % filename
-            subj_label, acq_label{imod,iacq} ) ); % feeds
+                sprintf( fn_bids_B1m_struct, ...            % filename
+                        subj_label, acq_label{imod,iacq} ) ); % feeds
         % copy file with name change
         copyfile(fn_iSA_nii,fn_bidsB1m_iAS_nii{imod,iacq});
         % b) Deal with JSON
@@ -292,14 +315,15 @@ for imod = 1:3 % (MTw, PDw, T1w)
 end
 
 % 1.b/ BIDSify JSON & fix it
-% --------------------------
-% 'Manufacturer' field has 3 names are returned -> keep 1st one only
-% add "IntendedFor" fieldname, for each modality
+% ..........................
+% Fixes:
+% - 'Manufacturer' field has 3 names are returned -> keep 1st one only
+% - add "IntendedFor" fieldname, for each modality
 for imod = 1:3 % (MTw, PDw, T1w)
     for iacq = 1:2 % (head/body)
         % BIDSify JSON
         fn_jsonfmat_BIDS = hmri_BIDSify_json( ...
-            fn_bidsB1m_iAS_json{imod,iacq},BIDSjson_options);
+            fn_bidsB1m_iAS_json{imod,iacq}, BIDSjson_options);
         % Keep 1st name from Manufacturer
         Json_ii = spm_load(fn_jsonfmat_BIDS);
         if iscell(Json_ii.Manufacturer)
@@ -317,11 +341,18 @@ for imod = 1:3 % (MTw, PDw, T1w)
     end
 end
 
-% 2/ Deal with B1+ (B1 bias correction), 11 FA x 2 acquisition types
-% ------------------------------------------------------------------
+% 2/ Deal with B1+ (B1 bias correction)
+% -------------------------------------
+% Keeping in mind there are 22 images: 11 FA x 2 acquisition types
+
+% 2.a/ Deal with all the file moving & renaming
+% .............................................
 % Filename structure
-fn_bids_B1p_struct = 'sub-%s_acq-%s_fa-%02d_B1plus.nii';
-% feed in "subject label", "acquisition type" (SE/STE), "flip angle" (index)
+fn_bids_B1p_struct = 'sub-%s_fa-%02d_acq-%s_B1plus.nii';
+% feed in 
+% - "subject label", 
+% - "flip angle" (index)
+% - "acquisition type" (SE/STE), 
 acq_label = {'SE', 'STE'};
 
 % Select the images for the SE/STE acquisition
@@ -341,7 +372,7 @@ for iacq = 1:2
         fn_iFA_nii = deblank(fn_B1plus{iacq}(ifa,:));
         fn_bidsB1p_nii = fullfile( pth_fmap, ... % path
             sprintf( fn_bids_B1p_struct, ...      % filename
-            subj_label, acq_label{iacq}, ifa ) ); % feeds
+                subj_label, ifa, acq_label{iacq} ) ); % feeds
         fn_bidsB1p_iFA_nii{iacq} = char(fn_bidsB1p_iFA_nii{iacq}, ...
             fn_bidsB1p_nii);
         % copy file with name change
@@ -359,9 +390,10 @@ for iacq = 1:2
 end
 
 % 2.b/ BIDSify JSON & fix it
-% --------------------------
-% 'Manufacturer' field has 3 names are returned -> keep 1st one only
-% add "IntendedFor" fieldname, for each modality
+% ..........................
+% Fixes:
+% - 'Manufacturer' field has 3 names are returned -> keep 1st one only
+% - add "IntendedFor" fieldname, for each modality
 
 % BIDSify all at once
 fn_jsonfmat_BIDS_all = hmri_BIDSify_json( ...
@@ -383,9 +415,18 @@ for ii=1:size(fn_jsonfmat_BIDS_all,1)
     spm_save(fn_jsonfmat_BIDS_all(ii,:), Json_ii, struct('indent','  '))
 end
 
-% 3/ Deal with B0, 2 magnitude + 1 phase difference image
-% -------------------------------------------------------
-% First the 2 magnitude images
+% One option could be to put the 'IntendedFor' field in a separate JSON
+% file, that would be applicable to all the B1plus.json files?
+
+% 3/ Deal with B0
+% ---------------
+% Keeping in mind, there are only 3 images: 2 mag + 1 phase diff images
+% Proceed 
+% - first the 2 magnitude images
+% - then the phase difference
+
+% 3.a/ Deal with the mag images moving & renaming
+% ...............................................
 % Filename structure
 fn_bids_B0mag_struct = 'sub-%s_magnitude%d.nii';
 % feed in "subject label", "magnitude index"
@@ -397,14 +438,14 @@ fn_bidsB0_nii = '';
 fn_bidsB0_json = '';
 
 for ii=1:2
-    % a) Deal with images
+    % i) Deal with images
     fn_bidsB0ii_nii = fullfile( pth_fmap, ...    % path
         sprintf( fn_bids_B0mag_struct, ...      % filename
                 subj_label, ii ) );         % feeds
     % copy file with name change
     copyfile(deblank(fn_B0mag_nii(ii,:)),fn_bidsB0ii_nii);
     fn_bidsB0_nii = char(fn_bidsB0_nii, fn_bidsB0ii_nii);
-    % b) Deal with JSON
+    % ii) Deal with JSON
     fn_B0mag_json = spm_file(fn_B0mag_nii(ii,:),'ext','json');
     fn_bidsB0ii_json = spm_file(fn_bidsB0ii_nii,'ext','json');
     % copy file with name change
@@ -412,12 +453,13 @@ for ii=1:2
     fn_bidsB0_json = char(fn_bidsB0_json, fn_bidsB0ii_json);
 end
 
-% Then the phase difference
+% 3.b/ Deal with the diff image moving & renaming
+% ...............................................
 % Filename structure
 fn_bids_B0pdiff_struct = 'sub-%s_phasediff.nii';
 pth_B0pdiff = fullfile(pth_Root,'gre_field_mapping_1acq_rl_0006');
 fn_B0pdiff_nii = spm_select('FPList',pth_B0pdiff,'^.*\.nii$');
-% a) Deal with images
+% i) Deal with images
 fn_bidsB0pdiff_nii = fullfile( pth_fmap, ...    % path
     sprintf( fn_bids_B0pdiff_struct, subj_label ) ); % filename
 % copy file with name change
@@ -425,7 +467,7 @@ copyfile(fn_B0pdiff_nii,fn_bidsB0pdiff_nii);
 fn_bidsB0_nii = char(fn_bidsB0_nii, fn_bidsB0pdiff_nii);
 fn_bidsB0_nii(1,:) = [];
 
-% b) Deal with JSON
+% ii) Deal with JSON
 fn_B0pdiff_json = spm_file(fn_B0pdiff_nii,'ext','json');
 fn_bidsB0pdiff_json = spm_file(fn_bidsB0pdiff_nii,'ext','json');
 % copy file with name change
@@ -433,10 +475,11 @@ copyfile(fn_B0pdiff_json,fn_bidsB0pdiff_json);
 fn_bidsB0_json = char(fn_bidsB0_json, fn_bidsB0pdiff_json);
 fn_bidsB0_json(1,:) = [];
 
-% 3.b/ BIDSify JSON & fix it
-% --------------------------
-% 'Manufacturer' field has 3 names are returned -> keep 1st one only
-% add "IntendedFor" fieldname, for each modality
+% 3.c/ BIDSify JSON & fix it
+% ..........................
+% Fixes:
+% - 'Manufacturer' field has 3 names are returned -> keep 1st one only
+% - add "IntendedFor" fieldname, for each modality
 fn_bidsB0_json = hmri_BIDSify_json(fn_bidsB0_json, BIDSjson_options);
 
 for ii=1:size(fn_bidsB0_json,1)
@@ -455,13 +498,6 @@ for ii=1:size(fn_bidsB0_json,1)
     % Save the updated version
     spm_save(fn_bidsB0_json(ii,:), Json_ii, struct('indent','  '))
 end
-
-% % 4/ Now update all JSON files from fmap folder
-% % ---------------------------------------------
-% fn_jsonfmat = spm_select('FPList',pth_fmap,'^.*\.json$');
-% % In one go, using a single function to pull out all the potential fields
-% % necessary for the MPM data
-% fn_jsonfmat_BIDS = hmri_BIDSify_json(fn_jsonfmat);
 
 %% III. Create the general data set description
 fn_dataset = fullfile(pth_BIDS,'dataset_description.json');
