@@ -1,5 +1,10 @@
 %% SCRIPT generating the batch for the hMRI data processing
-%
+% 
+% This scripts applies to the orginal dataset as distributed by the MFC
+% and NOT the BIDSified version as made available on the OSF website, see
+%   https://osf.io/k4bs5/ -> MPM folder
+% 
+% Why is this necessary ?
 % The batch needs the correct path to the data but these are stored on the
 % user's computer. Therefore this script simply
 % 1/ tries to figure out where the data are stored or asks the user to 
