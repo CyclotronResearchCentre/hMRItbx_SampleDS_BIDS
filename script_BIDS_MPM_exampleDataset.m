@@ -352,6 +352,15 @@ pth_B1p = fullfile(pth_Root,'mfc_seste_b1map_v1e_0004');
 fn_B1p{1} = spm_select('FPList',pth_B1p,'^.*-1\.nii$');
 fn_B1p{2} = spm_select('FPList',pth_B1p,'^.*-2\.nii$');
 
+% Get the "B1map Nominal FA Values" (nomFA) then 
+% 1) order the files in ascending order value
+% 2) push these values in the FA field in JSON afterwards
+% Note that all the values are saved in each original JSON file
+
+nomFA = get_metadata_val(fn_B1p{1}(1,:), 'B1mapNominalFAValues');
+[s_nomFA, is_nomFA] = sort(nomFA); 
+% use i_nomFA to properly index FA in BIDS-name
+
 % BIDSified filenames
 fn_bidsB1p_iFA_nii = cell(1,2);
 fn_bidsB1p_iFA_json = cell(1,2);
@@ -363,7 +372,7 @@ for iacq = 1:2
         % a) Deal with images
         fn_iFA_nii = deblank(fn_B1p{iacq}(ifa,:));
         fn_bidsB1p_nii = fullfile( pth_fmap, ... % path
-            sprintf( fn_bids_B1p_struct, subj_label, iacq, ifa ) ); % fname
+            sprintf( fn_bids_B1p_struct, subj_label, iacq, is_nomFA(ifa) ) ); % fname
         fn_bidsB1p_iFA_nii{iacq} = char(fn_bidsB1p_iFA_nii{iacq}, ...
             fn_bidsB1p_nii);
         % copy file with name change
@@ -385,10 +394,13 @@ end
 % Fixes:
 % - 'Manufacturer' field has 3 names are returned -> keep 1st one only
 % - add "IntendedFor" fieldname, for each modality
+% - remove 'NominalFAValues' and put the corresponding nomFA in 'FlipAngle'
 
 % BIDSify all at once
 fn_jsonfmat_BIDS_all = hmri_BIDSify_json( ...
     char(fn_bidsB1p_iFA_json(:)), BIDSjson_options);
+
+% Fix JSON files
 for ii=1:size(fn_jsonfmat_BIDS_all,1)
     % Keep 1st name from Manufacturer
     Json_ii = spm_load(fn_jsonfmat_BIDS_all(ii,:));
@@ -402,6 +414,14 @@ for ii=1:size(fn_jsonfmat_BIDS_all,1)
         Json_ii.IntendedFor = ...
             char(regexprep(cellstr(Json_ii.IntendedFor),'\\','/'));
     end
+    % Remove 'NominalFAValues' and put correspondin nomFA in 'FlipAngle'
+    ind_fn = rem(ii-1,11)+1; % figure out index [1 11]
+    if isfield(Json_ii,'NominalFAValues')
+        Json_ii = rmfield(Json_ii,'NominalFAValues');
+    end
+    Json_ii.FlipAngle = s_nomFA(is_nomFA(ind_fn)); % as fa index are  sorted
+    % equivalent to Json_ii.FlipAngle = nomFA(ind_fn)
+    
     % Save the updated version
     spm_save(fn_jsonfmat_BIDS_all(ii,:), Json_ii, struct('indent','  '))
 end
