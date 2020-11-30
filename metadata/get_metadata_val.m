@@ -766,18 +766,18 @@ else
                                 % alFree: [VoxDeph,SpoilAmp,EddCurr0,EddCurr1,TRamp,TFlat,BWT,0,0,0,0,0,2,MixingTime,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,12345],
                                 % adFree: [0,0,0,0,0,0,0,SlabGradScale,RefocCorr,0,0,RFSpoilBasicIncr]
                                 Wip = get_metadata_val(mstruc, 'WipParameters');
-                                EchoSpacing = Wip.alFree(5)*2+Wip.alFree(6)*1e-6;
+                                EchoSpacing = ( Wip.alFree(5)*2+Wip.alFree(6) )*1e-6;
                             case {'b1sev1a3d2' 'b1sev1b3d2' 'b1epi2f3d2' 'b1epi2g3d2' 'b1sev1a'} % 7T and Prisma versions by Kerrin Pine
                                 if contains(valMODELNAME,'Prisma','IgnoreCase',true)
                                     Wip = get_metadata_val(mstruc, 'WipParameters');
-                                    EchoSpacing = Wip.alFree(5)*2+Wip.alFree(6)*1e-6;
+                                    EchoSpacing = ( Wip.alFree(5)*2+Wip.alFree(6) )*1e-6;
                                 elseif contains(valMODELNAME,'7T','IgnoreCase',true)
                                     EchoSpacing = 540*1e-6;
                                 else
                                     % Do nothing
                                 end
                             case 'b1epi2d3d2' % 800um protocol from WTCN
-                                EchoSpacing = 540;
+                                EchoSpacing = 540*1e-6;
                         end
                         if ~exist('EchoSpacing','var')
                             fprintf(1,'\nWARNING: B1mapping version unknown, trying to base our guess on PixelBandwidth.\n');
