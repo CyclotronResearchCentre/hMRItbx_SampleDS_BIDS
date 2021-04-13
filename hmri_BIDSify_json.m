@@ -75,6 +75,11 @@ for ijson=1:nJson
         val = get_metadata_val( All_mdStruc{ijson}, ...
                 list_metadata_MPM.FieldnamesOriginal{ii});
         if ~isempty(val)
+            % turn scaling from char into number...
+            sc = list_metadata_MPM.Scaling(ii);
+            if ~isnan( sc )
+                val = val * sc;
+            end
             All_mdStruc_BIDS{ijson}.(list_metadata_MPM.FieldnamesBIDS{ii}) = val;
         end
     end

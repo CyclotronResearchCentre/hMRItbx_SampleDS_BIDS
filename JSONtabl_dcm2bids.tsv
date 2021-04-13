@@ -1,21 +1,21 @@
-FieldnamesOriginal	FieldnamesBIDS
-Manufacturer	Manufacturer
-ManufacturerModelName	ManufacturersModelName
-DeviceSerialNumber	DeviceSerialNumber
-StationName	StationName
-MagneticFieldStrength	MagneticFieldStrength
-ScanningSequence	ScanningSequence
-SequenceName	SequenceName
-ProtocolName	PulseSequenceDetails
-RepetitionTime	RepetitionTimeExcitation
-EchoTime	EchoTime
-FlipAngle	FlipAngle
-MT	MTState
-NumberOfMeasurements	NumberShots
-epiReadoutDuration	TotalReadoutTime
-PhaseEncodingDirectionSign	PhaseEncodingDirectionSign
-B1mapNominalFAValues	NominalFAValues
-B1mapMixingTime	MixingTime
-RFSpoilingPhaseIncrement	SpoilingRFPhaseIncrement
-spoilingGradientMoment	SpoilingGradientMoment
-spoilingGradientDuration	SpoilingGradientDuration
+FieldnamesOriginal	FieldnamesBIDS	Scaling
+Manufacturer	Manufacturer	NaN
+ManufacturerModelName	ManufacturersModelName	NaN
+DeviceSerialNumber	DeviceSerialNumber	NaN
+StationName	StationName	NaN
+MagneticFieldStrength	MagneticFieldStrength	NaN
+ScanningSequence	ScanningSequence	NaN
+SequenceName	SequenceName	NaN
+ProtocolName	PulseSequenceDetails	NaN
+RepetitionTime	RepetitionTimeExcitation	0.001
+EchoTime	EchoTime	0.001
+FlipAngle	FlipAngle	NaN
+MT	MTState	NaN
+NumberOfMeasurements	NumberShots	NaN
+epiReadoutDuration	TotalReadoutTime	0.001
+PhaseEncodingDirectionSign	PhaseEncodingDirectionSign	NaN
+B1mapNominalFAValues	NominalFAValues	NaN
+B1mapMixingTime	MixingTime	0.001
+RFSpoilingPhaseIncrement	SpoilingRFPhaseIncrement	NaN
+spoilingGradientMoment	SpoilingGradientMoment	NaN
+spoilingGradientDuration	SpoilingGradientDuration	0.001

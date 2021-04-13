@@ -71,9 +71,8 @@ The repository contains 2 scripts and 1 function:
 - [`script_BIDS_MPM_exampleDataset.m`](https://github.com/CyclotronResearchCentre/hMRItbx_SampleDS_BIDS/blob/master/script_BIDS_MPM_exampleDataset.m), to BIDS-ify the example dataset
 - [`hmri_BIDSify_json`](https://github.com/CyclotronResearchCentre/hMRItbx_SampleDS_BIDS/blob/master/hmri_BIDSify_json.m), to BIDS-ify the JSON files (which originally contain the DICOM header and history)
 - [`hmri_create_JSONtabl`](https://github.com/CyclotronResearchCentre/hMRItbx_SampleDS_BIDS/blob/master/hmri_create_JSONtabl.m), to build the list of meta-data
-- [`script_create_batch_original_data.m`](https://github.com/CyclotronResearchCentre/hMRItbx_SampleDS_BIDS/blob/master/script_create_batch_original_data.m), to efficiently create the batch for map creation from the downloaded example dataset
 
-These are further discussed here under
+These are further described here
 
 ### 1/ `script_BIDS_MPM_exampleDataset.m` to BIDS-ify the data
 
@@ -104,41 +103,12 @@ This is a simple and modular way to create a table of (acquisition) meta-data, n
 
 Note this list is not definitive, so the function could be updated as seemed fit.
 
-### 4/ `script_create_batch_original_data.m` to process the original data
+---
+
+## Creating maps
+
+Scripts to efficiently create the batch for map creation from the downloaded example dataset, in original or BIDS format, is available in a separate Github repo named [`hMRItoolbox_ExampleDataset_script`](https://github.com/CyclotronResearchCentre/hMRItoolbox_ExampleDataset_script)
+
 
 Being able to quickly processing the original data is still useful, e.g. to set up a ground truth of the results. Unfortunately in the batch file provided with the example dataset **the path to the various images are hard-coded**  and therefore will not run as is.
 
-One would thus have to *update all the path's* according to the OS (`/` or `\` separator) and where they are saved on your hard-drive (e.g. `C:\MyData\hMRIexample` or `/home/Myself/MyData/hMRIexample`). Therefore [`script_create_batch_original_data.m`](https://github.com/CyclotronResearchCentre/hMRItbx_SampleDS_BIDS/blob/master/script_create_batch_original_data.m) builds up such a batch based simply on the path to the root folder of the data set. Here is the help with some explanations:
-
-```
-%% SCRIPT generating the batch for the hMRI data processing
-% 
-% This scripts applies to the orginal dataset as distributed by the MFC
-% and NOT the BIDSified version as made available on the OSF website, see
-%   https://osf.io/k4bs5/ -> MPM folder
-% 
-% Why is this necessary ?
-% The batch needs the correct path to the data but these are stored on the
-% user's computer. Therefore this script simply
-% 1/ tries to figure out where the data are stored or asks the user to 
-%    specify the main folder manually.
-% 2/ then it sets up the hMRI map creation batch, with the selection of the
-%    provided 'hmri_local_defaults.m' file with default parameters.
-% 3/ finally saves it a .mat file for further use, e.g. loading in the
-%    batch-GUI
-%__________________________________________________________________________
-%
-% 1/ Finding or defining the 'rooDir' of the data folder.
-% The script successively tries a few options:
-% a) the user explicitly sets up the folder path
-% b) check if the data are in the current working directory
-% c) check if the data can be found relative to this script's current
-%    folder (one folder up actually)
-% d) if all alse fails, ask the user to select the folder manually
-%
-% 2/ Create the hMRI batch
-% The file sub-folder names are all explicitly stated, as they're those
-% from the original data set.
-```
-
-The batch also picks up the `hmri_local_defaults.m` file.

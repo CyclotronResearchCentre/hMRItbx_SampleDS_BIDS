@@ -51,8 +51,6 @@
 %   from the hMRI toolbox
 % - a tab-separated-value file, JSONtabl_dcm2bids.tsv, with the list of
 %   metadata fields required.
-% These 2 are already on the hMRI private github server in Leipzig
-% -> need to keep track of these.
 % 
 % Note:
 % =====
@@ -114,14 +112,20 @@
 % addpath('C:\Dox\1_Code\hMRI_sampledataset_code\hMRItbx_SampleDS_BIDS\metadata')
 
 % Main folder with the data
-pth_Root = 'C:\Dox\2_Data\hmri_sample_dataset_with_maps';
+pth_Root = 'D:\ddd_Codes\Test_hMRI_BIDS\DATA\Source\ORIG';
 % Subject label
-subj_label = 'anon';
+subj_label = '01';
 % Where the BIDS-ified data will be copied, pth_BIDS & pth_Subj
-pth_BIDS = fullfile(pth_Root,'BIDS_dataset_v4');
+pth_BIDS = fullfile(pth_Root,'BIDS_dataset');
 if ~exist(pth_BIDS,'dir'), mkdir(pth_BIDS), end;
 pth_Subj = fullfile(pth_BIDS,sprintf('sub-%s',subj_label));
 if ~exist(pth_Subj,'dir'), mkdir(pth_Subj), end;
+
+% JSON files: keep 'history' but remove 'acqpar'
+BIDSjson_options = struct(...
+    'keep_acqpar' , false, ...
+    'keep_history', true, ...
+    'addfield'    , '') ;
 
 %% I. Deal with the anatomical images
 
@@ -143,12 +147,12 @@ end
 % 2/ Move and rename anatomical images
 % ------------------------------------
 % Filename structure
-fn_bids_struct = 'sub-%s_acq-%s_echo-%d_fa-%d_mt-%s_MPM.nii';
+fn_bids_struct = 'sub-%s_acq-%s_echo-%d_flip-%d_mt-%s_MPM.nii';
 % Feed in 
 % - 'sub' -> subject label, 
 % - 'acq' -> free-form contrast info (MTw,PDw,T1w), kept for human readability
 % - 'echo' -> echo index,
-% - 'fa' -> flip angle index,
+% - 'flip' -> flip angle index,
 % - 'mt' -> magnetization transfer 'on' or 'off'
 % 
 % Since this is an MPM acquisition protocol, 
@@ -167,10 +171,10 @@ fn_bids_struct = 'sub-%s_acq-%s_echo-%d_fa-%d_mt-%s_MPM.nii';
 %   -> define a priori 'fa-1' and 'fa-2' for MTw/PDw and T1w resp.
 % - magentization transfer only occurs for the MTw images
 %   -> define a priori 'mt-on' and 'mt-off' for MTw and PDw/T1w resp.
-fa_mt_values = { ...
-    1 , 'on'  ; ... % MTw
-    1 , 'off' ; ... % PDw
-    2 , 'off'};     % T1w
+fa_mt_values = { ...    % for
+    1 , 'on'  ; ...     %   MTw
+    1 , 'off' ; ...     %   PDw
+    2 , 'off'};         %   T1w
 
 % 'anat' folder: define & create as needed
 pth_anat = fullfile(pth_Subj,'anat');
@@ -210,12 +214,6 @@ end
 
 % 3/ update corresponding json file
 % ---------------------------------
-% JSON files: keep 'history' but remove 'acqpar'
-BIDSjson_options = struct(...
-    'keep_acqpar' , false, ...
-    'keep_history', true, ...
-    'addfield'    , '') ;
-
 % Now update all JSON files
 fn_jsonAnat = spm_select('FPList',pth_anat,'^.*\.json$');
 % In one go, using a single function to pull out all the potential fields
@@ -251,11 +249,8 @@ end
 pth_fmap = fullfile(pth_Subj,'fmap');
 if ~exist(pth_fmap,'dir'), mkdir(pth_fmap), end;
 
-% JSON files: keep 'history' + add 'IntendedFor' but remove 'acqpar'
-BIDSjson_options = struct(...
-    'keep_acqpar' , false, ...
-    'keep_history', true, ...
-    'addfield'    , 'IntendedFor') ;
+% JSON files: add 'IntendedFor' field
+BIDSjson_options.addfield = 'IntendedFor' ;
 
 % 1/ Deal with B1- maps(RF sensitivity), 
 % --------------------------------------
@@ -269,6 +264,9 @@ fn_bids_B1m_struct = 'sub-%s_acq-%s_RB1COR.nii';
 % - "subject label", 
 % - "acquisition type" (head/body) \_ in the '_acq-' field
 % - "modality" (MTw/PDw/T1w)       /
+% One option could be to use the '_mod-' field but it is reserved for the
+% "defacemask" suffix apparently. See issue #3:
+% https://github.com/CyclotronResearchCentre/hMRItbx_SampleDS_BIDS/issues/3
 
 % Filename tags for the 3X2 types: (MTw, PDw, T1w) x (head/body)
 acq_label = { ...
@@ -341,11 +339,11 @@ end
 % 2.a/ Deal with all the file moving & renaming
 % .............................................
 % Filename structure
-fn_bids_B1p_struct = 'sub-%s_echo-%1d_fa-%02d_TB1EPI.nii';
+fn_bids_B1p_struct = 'sub-%s_echo-%1d_flip-%02d_TB1EPI.nii';
 % feed in 
 % - "subject label", 
 % - "echo (index) for SE/STE echoes (1/2)
-% - "flip angle" (index)
+% - "flip angle" (index), in increasing order of values for the FA!
 
 % Select the images for the SE/STE acquisition
 pth_B1p = fullfile(pth_Root,'mfc_seste_b1map_v1e_0004');
@@ -358,7 +356,7 @@ fn_B1p{2} = spm_select('FPList',pth_B1p,'^.*-2\.nii$');
 % Note that all the values are saved in each original JSON file
 
 nomFA = get_metadata_val(fn_B1p{1}(1,:), 'B1mapNominalFAValues');
-[s_nomFA, is_nomFA] = sort(nomFA); 
+[s_nomFA, ind_nomFA] = sort(nomFA); 
 % use i_nomFA to properly index FA in BIDS-name
 
 % BIDSified filenames
@@ -372,7 +370,7 @@ for iacq = 1:2
         % a) Deal with images
         fn_iFA_nii = deblank(fn_B1p{iacq}(ifa,:));
         fn_bidsB1p_nii = fullfile( pth_fmap, ... % path
-            sprintf( fn_bids_B1p_struct, subj_label, iacq, is_nomFA(ifa) ) ); % fname
+            sprintf( fn_bids_B1p_struct, subj_label, iacq, ind_nomFA(ifa) ) ); % fname
         fn_bidsB1p_iFA_nii{iacq} = char(fn_bidsB1p_iFA_nii{iacq}, ...
             fn_bidsB1p_nii);
         % copy file with name change
@@ -395,6 +393,8 @@ end
 % - 'Manufacturer' field has 3 names are returned -> keep 1st one only
 % - add "IntendedFor" fieldname, for each modality
 % - remove 'NominalFAValues' and put the corresponding nomFA in 'FlipAngle'
+% - add 'FlipAngleSeries' with sorted 'NominalFAValues' (this is not 100% 
+%   BIDS but useful for the hMRI toolbox)
 
 % BIDSify all at once
 fn_jsonfmat_BIDS_all = hmri_BIDSify_json( ...
@@ -407,6 +407,7 @@ for ii=1:size(fn_jsonfmat_BIDS_all,1)
     if iscell(Json_ii.Manufacturer)
         Json_ii.Manufacturer = Json_ii.Manufacturer{1};
     end
+    
     % Add IntendedFor information -> MPMw images
     Json_ii.IntendedFor = spm_file(char(fn_bidsMPMw(:)),'path','anat/');
     if strcmp(filesep,'\')
@@ -414,13 +415,17 @@ for ii=1:size(fn_jsonfmat_BIDS_all,1)
         Json_ii.IntendedFor = ...
             char(regexprep(cellstr(Json_ii.IntendedFor),'\\','/'));
     end
+    
     % Remove 'NominalFAValues' and put correspondin nomFA in 'FlipAngle'
     ind_fn = rem(ii-1,11)+1; % figure out index [1 11]
     if isfield(Json_ii,'NominalFAValues')
         Json_ii = rmfield(Json_ii,'NominalFAValues');
     end
-    Json_ii.FlipAngle = s_nomFA(is_nomFA(ind_fn)); % as fa index are  sorted
+    Json_ii.FlipAngle = s_nomFA(ind_nomFA(ind_fn)); % as fa index are sorted
     % equivalent to Json_ii.FlipAngle = nomFA(ind_fn)
+    
+    % Add 'FlipAngleSeries' with sorted 'NominalFAValues' 
+    Json_ii.FlipAngleSeries = s_nomFA;
     
     % Save the updated version
     spm_save(fn_jsonfmat_BIDS_all(ii,:), Json_ii, struct('indent','  '))
@@ -433,8 +438,8 @@ end
 % - first the 2 magnitude images
 % - then the phase difference
 
-% 3.a/ Deal with the mag images moving & renaming
-% ...............................................
+% 3.a/ Deal with the 2 "magnitude" images moving & renaming
+% .........................................................
 % Filename structure
 fn_bids_B0mag_struct = 'sub-%s_magnitude%d.nii';
 % feed in "subject label", "magnitude index"
@@ -461,8 +466,8 @@ for ii=1:2
     fn_bidsB0_json = char(fn_bidsB0_json, fn_bidsB0ii_json);
 end
 
-% 3.b/ Deal with the diff image moving & renaming
-% ...............................................
+% 3.b/ Deal with the "phasediff" image moving & renaming
+% ......................................................
 % Filename structure
 fn_bids_B0pdiff_struct = 'sub-%s_phasediff.nii';
 pth_B0pdiff = fullfile(pth_Root,'gre_field_mapping_1acq_rl_0006');
