@@ -7,39 +7,39 @@ This list the parameters as being used by the [hMRI toolbox]([http://hmri.info](
 ---
 
 
-| Fieldnames queried by the hMRI toolbox |Fieldnames for BIDS | In BIDS or description/comments |
-| ---- | ---- | ---- |
-| **MACHINE NAMING** | | |
-| `Manufacturer` | `Manufacturer` | YES |
-| `ManufacturerModelName` | `ManufacturersModelName` | YES |
-| `DeviceSerialNumber` | `DeviceSerialNumber` | YES |
-| `StationName` | `StationName` | YES |
-| `MagneticFieldStrength` | `MagneticFieldStrength` | YES |
-| | | |
-| **SEQUENCE NAMING** | | |
-| `ScanningSequence` | `ScanningSequence` | YES |
-| `SequenceName` | `SequenceName` | YES |
-| `ProtocolName` | `PulseSequenceDetails` |  YES, assuming it fits |
-| | | |
-| **Main acquisition parameters** | | |
-| `RepetitionTime` | `RepetitionTimeExcitation`	| YES |
-| `EchoTime` | `EchoTime` | YES |
-| `FlipAngle` | `FlipAngle` | YES |
-| `MT` | `MTState` | YES |
-| | | |
-| **IN-PLANE ENCODING** | ||
-| `NumberOfMeasurements` | `NumberShots` | YES, assuming it fits |
-| `epiReadoutDuration` | `TotalReadoutTime` | YES, assuming it fits |
-| `PhaseEncodingDirectionSign` | `PhaseEncodingDirectionSign` | NO, it should be `SliceEncodingDirection` but here only the sign is known. |
-| | | |
-| **RF CORRECTION**  in al_B1mapping and mtflash3d sequences | |  |
-| `RFSpoilingPhaseIncrement` | `SpoilingRFPhaseIncrement` | YES |
-| `spoilingGradientMoment` | `SpoilingGradientMoment` | YES |
-| `spoilingGradientDuration` | `SpoilingGradientDuration` | YES |
-| | | |
-| **3D_EPI FOR B1 MAPPING** | | |
-| `B1mapNominalFAValues` | `NominalFAValues` | NO |
-| `B1mapMixingTime` | `MixingTime` | NO |
+| Fieldnames queried by the hMRI toolbox |Fieldnames for BIDS | In BIDS or<br /> description/comments | Scaling |
+| ---- | ---- | ---- | ---- |
+| **MACHINE NAMING** | | | |
+| `Manufacturer` | `Manufacturer` | YES | / |
+| `ManufacturerModelName` | `ManufacturersModelName` | YES | / |
+| `DeviceSerialNumber` | `DeviceSerialNumber` | YES | / |
+| `StationName` | `StationName` | YES | / |
+| `MagneticFieldStrength` | `MagneticFieldStrength` | YES |  |
+| | | | |
+| **SEQUENCE NAMING** | | | / |
+| `ScanningSequence` | `ScanningSequence` | YES | / |
+| `SequenceName` | `SequenceName` | YES | / |
+| `ProtocolName` | `PulseSequenceDetails` |  YES, assuming it fits | / |
+| | | | |
+| **Main acquisition parameters** | | | |
+| `RepetitionTime` | `RepetitionTimeExcitation`	| YES | ms​ :arrow_right: ​s |
+| `EchoTime` | `EchoTime` | YES | ms :arrow_right: s |
+| `FlipAngle` | `FlipAngle` | YES | / |
+| `MT` | `MTState` | YES | / |
+| | | | |
+| **IN-PLANE ENCODING** | |||
+| `NumberOfMeasurements` | `NumberShots` | YES, assuming it fits | / |
+| `epiReadoutDuration` | `TotalReadoutTime` | YES, assuming it fits | ms :arrow_right: s |
+| `PhaseEncodingDirectionSign` | `PhaseEncodingDirectionSign` | NO, it should be `SliceEncodingDirection` but here only the sign is known. |  |
+| | | | |
+| **RF CORRECTION**  in al_B1mapping and mtflash3d sequences | |  |  |
+| `RFSpoilingPhaseIncrement` | `SpoilingRFPhaseIncrement` | YES |  |
+| `spoilingGradientMoment` | `SpoilingGradientMoment` | YES |  |
+| `spoilingGradientDuration` | `SpoilingGradientDuration` | YES | ms :arrow_right: s |
+| | | | |
+| **3D_EPI FOR B1 MAPPING** | | | |
+| `B1mapNominalFAValues` | `NominalFAValues` | NO |  |
+| `B1mapMixingTime` | `MixingTime` | NO | ms :arrow_right: s |
 
 ### Comments:
 
