@@ -1,5 +1,5 @@
 # hMRI toolbox Sample Data Set BIDS
-Bits of code to BIDS-ify the [example data set](https://owncloud.gwdg.de/index.php/s/iv2TOQwGy4FGDDZ) from the [hMRI toolbox](https://hmri-group.github.io/hMRI-toolbox/).
+Bits of code to BIDS-ify the example MPM data set, [reference paper](https://doi.org/10.1016/j.dib.2019.104132) and [original data](https://owncloud.gwdg.de/index.php/s/iv2TOQwGy4FGDDZ), from the [hMRI toolbox](https://hmri.info/).
 
 ## Original data description
 
@@ -55,7 +55,7 @@ The organisation of the data in 12 folders is overall complex to handle, and the
 
 ## Objective
 
-The goal is thus to make this "raw" set of data BIDS compliant, according to the [BEP001 proposal](https://github.com/bids-standard/bep001) that is currently being developed.  This involves:
+The goal is thus to make this "raw" set of data BIDS compliant, according to the BIDS extension for qunatitative MRI, see the [qMRI BIDS specs](https://bids-specification.readthedocs.io/en/stable/appendices/qmri.html) and the [Karakuzu et al. (2022) reference paper](https://doi.org/10.1038/s41597-022-01571-4). This involves:
 
 - reorganizing the files into BIDS-defined folders, here `anat` and `fmap`
 - renaming the image+JSON files using BIDS nomenclature for multi-echo, multi-FA, image type, etc.
@@ -63,7 +63,7 @@ The goal is thus to make this "raw" set of data BIDS compliant, according to the
 
 The list of meta-data field names used in the hMRI toolbox/MPM protocol versus what's available in BIDS specs are compared in this [`MPM_parameter_list.md`](https://github.com/CyclotronResearchCentre/hMRItbx_SampleDS_BIDS/blob/master/MPM_parameter_list.md) file. Some are missing from the BIDS specs, especially relating to B1 maps.
 
-The resulting BIDS-ified dataset will eventually be published on the [BEP001 OSF platform](https://osf.io/k4bs5/).
+The resulting BIDS-ified dataset is available in the OSF [qMRI-BIDS example dataset](https://osf.io/k4bs5/), see the `ds-mpm` sub-folder.
 
 ## Scripts and bits of code
 
@@ -90,7 +90,7 @@ Note too that the script relies on :
 - the `hmri_BIDSify_json.m` function to refactor the meta-data from  the DICOM header, especially the acquisition parameters. This itself relies on the `get_metadata_val.m` function from the hMRI toolbox
 - a tab-separated-value file, `JSONtabl_dcm2bids.tsv`, with the list of meta-data fields required.
 
-  These could certainly be improved too.
+These could certainly be improved too.
 
 ### 2/ `hmri_BIDSify_json.m` to handle acquisition parameter metadata
 
